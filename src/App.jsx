@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  PlusCircle,
   ArrowLeft,
   Bell,
   BookOpen,
@@ -24,7 +25,30 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import "./lib/appwrite";
+import { Client, TablesDB, Storage, Realtime, Channel, ID, Query } from "appwrite";
+
+const APPWRITE_CONFIG = {
+  endpoint: "https://sgp.cloud.appwrite.io/v1",
+  projectId: "6a0ed0800035c0b14fb4",
+  databaseId: "6a0ed0be00162f498d5d",
+  messagesCollectionId: "messages",
+  bucketId: "chat_media",
+};
+
+const appwriteClient = new Client()
+  .setEndpoint(APPWRITE_CONFIG.endpoint)
+  .setProject(APPWRITE_CONFIG.projectId);
+
+window.__kchatConfig = APPWRITE_CONFIG;
+window.__kchatAppwrite = {
+  client: appwriteClient,
+  tablesDB: new TablesDB(appwriteClient),
+  storage: new Storage(appwriteClient),
+  realtime: new Realtime(appwriteClient),
+  Channel,
+  ID,
+  Query,
+};
 
 function KChatLogoMark({ size = 44, className = "" }) {
   return (
@@ -47,13 +71,15 @@ const SPOTLIGHT_IMAGE = "https://images.unsplash.com/photo-1548013146-72479768ba
 const CAPTAIN_IMAGE = "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=900&q=80";
 const AD_FORM_IMAGE = "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80";
 
-const BASE_GROUPS = [
-  { id: 1, name: "General chats", area: "Imphal", members: "2.4k", tag: "Creative", unread: 9, health: 96, icon: Palette, color: "mint" },
-  { id: 2, name: "Gastronomy", area: "Citywide", members: "1.8k", tag: "Food", unread: 4, health: 91, icon: Utensils, color: "orange" },
-  { id: 3, name: "Globetrotters", area: "Manipur", members: "3.1k", tag: "Travel", unread: 21, health: 98, icon: Compass, color: "purple" },
-  { id: 4, name: "Tech Trends", area: "Imphal West", members: "5.2k", tag: "Tech", unread: 2, health: 88, icon: Zap, color: "beige" },
-  { id: 5, name: "Local Jobs Board", area: "Imphal West", members: "442", tag: "Jobs", unread: 6, health: 93, icon: BookOpen, color: "mint" },
-  { id: 6, name: "Safety Alert Network", area: "Citywide", members: "1.5k", tag: "Safety", unread: 12, health: 99, icon: ShieldCheck, color: "orange" },
+const GROUPS_KEY = "kchat_groups";
+
+const DEFAULT_GROUPS = [
+  { id: 1, name: "General chats", area: "Imphal", members: "2.4k", tag: "Creative", unread: 9, health: 96, icon: Palette, color: "mint", membersList: ["admin-1", "admin-2"], isPrivate: false, createdBy: "admin-1", admins: ["admin-1", "admin-2"] },
+  { id: 2, name: "Gastronomy", area: "Citywide", members: "1.8k", tag: "Food", unread: 4, health: 91, icon: Utensils, color: "orange", membersList: ["admin-1", "admin-2"], isPrivate: false, createdBy: "admin-1", admins: ["admin-1", "admin-2"] },
+  { id: 3, name: "Globetrotters", area: "Manipur", members: "3.1k", tag: "Travel", unread: 21, health: 98, icon: Compass, color: "purple", membersList: ["admin-1", "admin-2"], isPrivate: false, createdBy: "admin-1", admins: ["admin-1", "admin-2"] },
+  { id: 4, name: "Tech Trends", area: "Imphal West", members: "5.2k", tag: "Tech", unread: 2, health: 88, icon: Zap, color: "beige", membersList: ["admin-1", "admin-2"], isPrivate: false, createdBy: "admin-1", admins: ["admin-1", "admin-2"] },
+  { id: 5, name: "Local Jobs Board", area: "Imphal West", members: "442", tag: "Jobs", unread: 6, health: 93, icon: BookOpen, color: "mint", membersList: ["admin-1", "admin-2"], isPrivate: false, createdBy: "admin-1", admins: ["admin-1", "admin-2"] },
+  { id: 6, name: "Safety Alert Network", area: "Citywide", members: "1.5k", tag: "Safety", unread: 12, health: 99, icon: ShieldCheck, color: "orange", membersList: ["admin-1", "admin-2"], isPrivate: false, createdBy: "admin-1", admins: ["admin-1", "admin-2"] },
 ];
 
 const CATEGORIES = ["Food", "Arts", "Tech", "Events"];
@@ -88,7 +114,31 @@ const TRENDING_TOPICS = [
   { id: "t3", title: "Concert this weekend", type: "Event", location: "Imphal", heat: 81, icon: Sparkles, color: "purple" },
   { id: "t4", title: "Job fair registration open", type: "Jobs", location: "Imphal West", heat: 78, icon: BookOpen, color: "beige" },
 ];
-const currentUser = { uid: "demo-user-1", name: "Kanglei Member" };
+const TEST_USERS = [
+  { uid: "admin-1", name: "Main Admin", phone: "7000000001", password: "Admin@123", role: "admin" },
+  { uid: "admin-2", name: "Control Admin", phone: "7000000002", password: "Admin@123", role: "admin" },
+  { uid: "user-1", name: "Ricky", phone: "7000000003", password: "User@123", role: "user" },
+  { uid: "user-2", name: "John", phone: "7000000004", password: "User@123", role: "user" },
+  { uid: "user-3", name: "Alex", phone: "7000000005", password: "User@123", role: "user" },
+  { uid: "user-4", name: "Maya", phone: "7000000006", password: "User@123", role: "user" },
+  { uid: "user-5", name: "Sophia", phone: "7000000007", password: "User@123", role: "user" },
+  { uid: "user-6", name: "Daniel", phone: "7000000008", password: "User@123", role: "user" },
+  { uid: "user-7", name: "Emma", phone: "7000000009", password: "User@123", role: "user" },
+  { uid: "user-8", name: "Chris", phone: "7000000010", password: "User@123", role: "user" },
+  { uid: "user-9", name: "Kevin", phone: "7000000011", password: "User@123", role: "user" },
+  { uid: "user-10", name: "Olivia", phone: "7000000012", password: "User@123", role: "user" },
+];
+
+function getSavedUser() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem("kchat_current_user") || "null");
+    return TEST_USERS.find((user) => user.uid === saved?.uid) || TEST_USERS[2];
+  } catch {
+    return TEST_USERS[2];
+  }
+}
+
+const currentUser = getSavedUser();
 
 const storage = {
   get(key, fallback) { 
@@ -110,15 +160,98 @@ const storage = {
   },
 };
 
+function normalizeGroups(groups = DEFAULT_GROUPS) {
+  const adminIds = ["admin-1", "admin-2"];
+  let changed = false;
+
+  const normalized = groups.map((group) => {
+    const membersList = Array.from(new Set([...(group.membersList || []), ...adminIds].filter(Boolean)));
+    const admins = Array.from(new Set([...(group.admins || []), ...adminIds].filter(Boolean)));
+    const needsFix =
+      membersList.length !== (group.membersList || []).length ||
+      admins.length !== (group.admins || []).length ||
+      group.createdBy === "demo-user-1";
+
+    if (needsFix) changed = true;
+
+    return {
+      ...group,
+      membersList,
+      admins,
+      createdBy: group.createdBy === "demo-user-1" ? "admin-1" : group.createdBy || "admin-1",
+    };
+  });
+
+  if (changed) storage.set(GROUPS_KEY, normalized);
+  return normalized;
+}
+
+const BASE_GROUPS = normalizeGroups(storage.get(GROUPS_KEY, DEFAULT_GROUPS));
+
 function chatKey(groupId) {
   return `kchat_messages_${groupId}`;
+}
+
+function typingKey(groupId) {
+  return `kchat_typing_${groupId}`;
+}
+
+function unreadKey(groupId) {
+  return `kchat_unread_${groupId}`;
 }
 
 function defaultMessages(groupName = "Kanglei Chat") {
   return [
     { id: "m1", senderId: "demo-user-2", senderName: "Local Captain", body: `Welcome to ${groupName}. This chat is ready for live testing.`, createdAt: Date.now() - 60000, status: "delivered" },
-    { id: "m2", senderId: currentUser.uid, senderName: currentUser.name, body: "Great, I can see the group chat now.", createdAt: Date.now() - 30000, status: "sent" },
+    { id: "m2", senderId: currentUser.uid, senderName: currentUser.name, body: "Great, I can see the group chat now.", createdAt: Date.now() - 30000, status: "seen" },
   ];
+}
+
+function messageStatusIcon(status) {
+  if (status === "queued") return "○";
+  if (status === "sending") return "…";
+  if (status === "failed") return "!";
+  if (status === "seen") return "✓✓";
+  if (status === "delivered") return "✓✓";
+  return "✓";
+}
+
+function canUseBrowserNotifications() {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+async function requestNotificationPermission(showToast) {
+  if (!canUseBrowserNotifications()) {
+    showToast("Notifications are not supported on this device preview yet.");
+    return false;
+  }
+
+  if (Notification.permission === "granted") {
+    showToast("Notifications already enabled.");
+    return true;
+  }
+
+  if (Notification.permission === "denied") {
+    showToast("Notifications are blocked. Enable them from browser/app settings.");
+    return false;
+  }
+
+  const result = await Notification.requestPermission();
+  const granted = result === "granted";
+  showToast(granted ? "Notifications enabled." : "Notifications not enabled.");
+  return granted;
+}
+
+function notifyIncomingMessage(groupName, message) {
+  if (!canUseBrowserNotifications()) return;
+  if (Notification.permission !== "granted") return;
+  if (message.senderId === currentUser.uid) return;
+
+  const body = message.body || (message.mediaType ? `Shared ${message.mediaType}` : "New message");
+  new Notification(groupName || "Kanglei Chat", {
+    body,
+    tag: `kchat-${message.id}`,
+  });
 }
 
 const realtimeChat = {
@@ -144,12 +277,12 @@ const realtimeChat = {
 };
 
 const appwriteConfig = {
-  endpoint: window.__kchatConfig?.endpoint || "https://sgp.cloud.appwrite.io/v1",
-  projectId: window.__kchatConfig?.projectId || "6a0ed0800035c0b14fb4",
-  databaseId: window.__kchatConfig?.databaseId || "6a0ed0be00162f498d5d",
-  messagesCollectionId: window.__kchatConfig?.messagesCollectionId || "messages",
-  groupsCollectionId: window.__kchatConfig?.groupsCollectionId || "groups",
-  bucketId: window.__kchatConfig?.bucketId || "chat_media",
+  endpoint: APPWRITE_CONFIG.endpoint,
+  projectId: APPWRITE_CONFIG.projectId,
+  databaseId: APPWRITE_CONFIG.databaseId,
+  messagesCollectionId: APPWRITE_CONFIG.messagesCollectionId,
+  groupsCollectionId: "groups",
+  bucketId: APPWRITE_CONFIG.bucketId,
 };
 
 async function compressImage(file, maxWidth = 1280, quality = 0.78) {
@@ -177,13 +310,24 @@ function makeLocalMediaUrl(file) {
   return URL.createObjectURL(file);
 }
 
+function cleanupBlobUrls(messages = []) {
+  messages.forEach((message) => {
+    if (typeof message.mediaUrl === "string" && message.mediaUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(message.mediaUrl);
+    }
+    if (typeof message.thumbnailUrl === "string" && message.thumbnailUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(message.thumbnailUrl);
+    }
+  });
+}
+
 const appwriteRealtimeChat = {
   isConfigured() {
     return Boolean(window.__kchatAppwrite?.client && window.__kchatAppwrite?.tablesDB && appwriteConfig.projectId !== "PASTE_APPWRITE_PROJECT_ID_HERE");
   },
   subscribe(groupId, groupName, callback) {
     if (!this.isConfigured()) return realtimeChat.subscribe(groupId, groupName, callback);
-    const { client, tablesDB, Query } = window.__kchatAppwrite;
+    const { realtime, tablesDB, Channel, Query } = window.__kchatAppwrite;
     const loadMessages = async () => {
       try {
         const response = await tablesDB.listRows({ databaseId: appwriteConfig.databaseId, tableId: appwriteConfig.messagesCollectionId, queries: [Query.equal("groupId", String(groupId)), Query.orderAsc("createdAt"), Query.limit(100)] });
@@ -193,15 +337,31 @@ const appwriteRealtimeChat = {
       }
     };
     loadMessages();
-    const unsubscribe = client.subscribe(`databases.${appwriteConfig.databaseId}.tables.${appwriteConfig.messagesCollectionId}.rows`, (event) => {
-      if (event.payload?.groupId === String(groupId)) loadMessages();
-    });
-    return () => unsubscribe();
+    let subscription;
+    realtime
+      .subscribe(
+        Channel.tablesdb(appwriteConfig.databaseId).table(appwriteConfig.messagesCollectionId).row().create(),
+        (event) => {
+          if (event.payload?.groupId === String(groupId)) loadMessages();
+        },
+        [Query.equal("groupId", [String(groupId)])]
+      )
+      .then((activeSubscription) => {
+        subscription = activeSubscription;
+      })
+      .catch(() => {
+        // Initial listRows still keeps chat usable if websocket setup fails.
+      });
+
+    return () => {
+      if (subscription?.unsubscribe) subscription.unsubscribe();
+      else if (subscription?.close) subscription.close();
+    };
   },
   async send(groupId, groupName, message) {
     if (!this.isConfigured()) return realtimeChat.send(groupId, groupName, message);
     const { tablesDB, ID } = window.__kchatAppwrite;
-    return tablesDB.createRow({ databaseId: appwriteConfig.databaseId, tableId: appwriteConfig.messagesCollectionId, rowId: ID.unique(), data: { groupId: String(groupId), senderId: message.senderId, senderName: message.senderName, body: message.body, status: "sent", mediaUrl: message.mediaUrl || "", mediaType: message.mediaType || "", createdAt: Date.now() } });
+    return tablesDB.createRow({ databaseId: appwriteConfig.databaseId, tableId: appwriteConfig.messagesCollectionId, rowId: ID.unique(), data: { groupId: String(groupId), senderId: message.senderId, senderName: message.senderName, body: message.body, status: message.status || "sent", mediaUrl: message.mediaUrl || "", mediaType: message.mediaType || "", createdAt: Date.now() } });
   },
   async uploadMedia(groupId, file, onProgress = () => {}) {
     const error = validateMediaFile(file);
@@ -235,6 +395,9 @@ function runSelfTests() {
   console.assert(typeof appwriteRealtimeChat.uploadMedia === "function", "Expected media upload adapter");
   console.assert(typeof compressImage === "function", "Expected image compression helper");
   console.assert(typeof validateMediaFile === "function", "Expected media validation helper");
+  console.assert(typeof cleanupBlobUrls === "function", "Expected media cleanup helper");
+  console.assert(typeof requestNotificationPermission === "function", "Expected notification permission helper");
+  console.assert(typeof unreadKey === "function", "Expected unread counter key helper");
   console.assert(typeof storage.get === "function" && typeof storage.set === "function", "Expected safe storage adapter");
 }
 
@@ -288,12 +451,47 @@ function BottomNav({ active, setActive }) {
   const items = [
     { id: "feed", label: "Chat", Icon: MessageCircle },
     { id: "explore", label: "Explore", Icon: Compass },
+    { id: "sponsorForm", label: "Post", Icon: PlusCircle },
     { id: "profile", label: "Profile", Icon: User },
   ];
+
   return (
-    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-[#f0dfd5] bg-[#fff8f5]/95 px-5 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur-xl">
-      <div className="flex items-center justify-between rounded-[24px] bg-white/60 p-1">
-        {items.map(({ id, label, Icon }) => <button key={id} onClick={() => setActive(id)} className={`flex min-w-24 flex-col items-center gap-1 rounded-full px-4 py-2 text-[11px] font-semibold transition active:scale-95 ${active === id ? "bg-[#ff9f43] text-[#2e1500] shadow-lg shadow-orange-100" : "text-[#221a13]"}`}><Icon className="h-5 w-5" />{label}</button>)}
+    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-[#f0dfd5] bg-[#fff8f5]/96 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-2xl">
+      <div className="flex items-center justify-between rounded-[30px] bg-white/75 px-2 py-2 shadow-[0_-8px_25px_rgba(34,26,19,0.08)]">
+        {items.map(({ id, label, Icon }) => {
+          const isActive = active === id;
+
+          return (
+            <button
+              key={id}
+              onClick={() => setActive(id)}
+              className={`relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[22px] px-2 py-2 transition-all duration-300 active:scale-95 ${
+                isActive
+                  ? "bg-[#ffeddc] text-[#8f4e00] shadow-sm"
+                  : "text-[#221a13]"
+              }`}
+            >
+              {isActive && (
+                <div className="absolute top-1 h-1 w-10 rounded-full bg-[#ff9f43] transition-all duration-300" />
+              )}
+
+              <Icon
+                className={`transition-all duration-300 ${
+                  isActive ? "h-5 w-5" : "h-[18px] w-[18px]"
+                }`}
+                strokeWidth={isActive ? 2.6 : 2.2}
+              />
+
+              <span
+                className={`text-[11px] font-black transition-all duration-300 ${
+                  isActive ? "text-[#8f4e00]" : ""
+                }`}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
@@ -312,7 +510,7 @@ function ActionDrawer({ open, onClose, setActive, resetApp }) {
     { title: "Captain privilege", sub: "View tier perks", target: "tiers" },
     { title: "Profile settings", sub: "Safety and account controls", target: "profile" },
   ];
-  return <div className="fixed inset-0 z-[70] bg-black/25 backdrop-blur-sm" onClick={onClose}><div className="absolute bottom-0 left-1/2 w-full max-w-[430px] -translate-x-1/2 rounded-t-[36px] bg-[#fff8f5] p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-black">Menu</h2><p className="text-xs font-bold text-[#544437]">Quick actions</p></div><button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-2xl bg-[#fff1e8]"><X className="h-5 w-5" /></button></div><div className="space-y-2">{items.map((item) => <button key={item.title} onClick={() => { setActive(item.target); onClose(); }} className="flex w-full items-center justify-between rounded-[24px] bg-white/80 p-4 text-left transition active:scale-95"><div><div className="font-black">{item.title}</div><div className="text-xs font-semibold text-[#544437]">{item.sub}</div></div><ChevronRight className="h-5 w-5 text-[#8f4e00]" /></button>)}<button onClick={resetApp} className="mt-3 w-full rounded-[24px] bg-[#221a13] p-4 text-left font-black text-white transition active:scale-95">Logout / reset demo</button></div></div></div>;
+  return <div className="fixed inset-0 z-[70] bg-black/25 backdrop-blur-sm" onClick={onClose}><div className="absolute bottom-0 left-1/2 w-full max-w-[430px] -translate-x-1/2 rounded-t-[36px] bg-[#fff8f5] p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-black">Menu</h2><p className="text-xs font-bold text-[#544437]">Quick actions</p></div><button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-2xl bg-[#fff1e8]"><X className="h-5 w-5" /></button></div><div className="space-y-2">{items.map((item) => <button key={item.title} onClick={() => { setActive(item.target); onClose(); }} className="flex w-full items-center justify-between rounded-[24px] bg-white/80 p-4 text-left transition active:scale-95"><div><div className="font-black">{item.title}</div><div className="text-xs font-semibold text-[#544437]">{item.sub}</div></div><ChevronRight className="h-5 w-5 text-[#8f4e00]" /></button>)}<button onClick={resetApp} className="mt-3 w-full rounded-[24px] bg-[#221a13] p-4 text-left font-black text-white transition active:scale-95">Logout / reset app</button></div></div></div>;
 }
 
 function MiniBrandBanner() {
@@ -331,20 +529,20 @@ function MiniBrandBanner() {
 
 function OnboardingScreen({ setActive, showToast, headerProps }) {
   const [phone, setPhone] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [selected, setSelected] = useState(["Local News", "Food", "Events"]);
   const cleanPhone = (value) => value.split("").filter((char) => char >= "0" && char <= "9").join("").slice(0, 10);
-  const sendOtp = () => {
-    if (phone.length < 10) return showToast("Enter a valid 10-digit mobile number.");
-    setOtpSent(true);
-    showToast("Test OTP sent. Use any 4 digits.");
-  };
-  const continueToFeed = () => {
-    if (!otpSent) return showToast("Send OTP first, then continue.");
+
+  const login = () => {
+    const account = TEST_USERS.find((user) => user.phone === phone && user.password === password);
+    if (!account) return showToast("Wrong test phone or password.");
+    storage.set("kchat_current_user", account);
     storage.set("kchat_logged_in", true);
-    setActive("feed");
+    showToast(`${account.name} logged in.`);
+    window.location.reload();
   };
-  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><section className="relative overflow-hidden bg-gradient-to-r from-[#fff1e8] to-[#f8d8ff]/35 px-5 py-5 text-center"><div className="relative z-10"><h1 className="text-2xl font-black tracking-tight text-[#8f4e00]">Welcome to Kanglei Chat</h1><p className="mt-2 text-sm text-[#544437]">Connect with your local community instantly.</p></div></section><section className="space-y-5 px-5 pt-6"><GlassCard className="p-5"><label className="text-xs font-black uppercase tracking-widest text-[#877365]">Phone verification</label><div className="mt-3 flex items-center gap-3 rounded-full border border-[#dac2b1] bg-white px-5 py-4"><span className="font-black text-[#8f4e00]">+91</span><input value={phone} onChange={(event) => setPhone(cleanPhone(event.target.value))} className="w-full bg-transparent text-base font-semibold outline-none placeholder:text-[#877365]" placeholder="Enter mobile number" inputMode="numeric" /></div><button onClick={sendOtp} className="mt-4 w-full rounded-full bg-[#8f4e00] py-4 text-base font-bold text-white shadow-lg transition active:scale-95">{otpSent ? "OTP Sent ✓" : "Send OTP"}</button></GlassCard><GlassCard className="p-5"><h2 className="text-lg font-black">Select interests</h2><div className="mt-4 flex flex-wrap gap-2">{INTERESTS.map((item) => { const active = selected.includes(item); return <button key={item} onClick={() => setSelected(active ? selected.filter((x) => x !== item) : [...selected, item])} className={`rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${active ? "bg-[#ff9f43] text-[#2e1500]" : "bg-[#fff1e8] text-[#544437]"}`}>{item}</button>; })}</div><button onClick={continueToFeed} className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#221a13] py-4 font-black text-white transition active:scale-95">Continue <ChevronRight className="h-5 w-5" /></button></GlassCard></section></main></>;
+
+  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><section className="relative overflow-hidden bg-gradient-to-r from-[#fff1e8] to-[#f8d8ff]/35 px-5 py-5 text-center"><div className="relative z-10"><h1 className="text-2xl font-black tracking-tight text-[#8f4e00]">Welcome to Kanglei Chat</h1><p className="mt-2 text-sm text-[#544437]">Use permanent test accounts for 10 phones.</p></div></section><section className="space-y-5 px-5 pt-6"><GlassCard className="p-5"><label className="text-xs font-black uppercase tracking-widest text-[#877365]">Test account login</label><div className="mt-3 flex items-center gap-3 rounded-full border border-[#dac2b1] bg-white px-5 py-4"><span className="font-black text-[#8f4e00]">+91</span><input value={phone} onChange={(event) => setPhone(cleanPhone(event.target.value))} className="w-full bg-transparent text-base font-semibold outline-none placeholder:text-[#877365]" placeholder="Phone number" inputMode="numeric" /></div><div className="mt-3 flex items-center gap-3 rounded-full border border-[#dac2b1] bg-white px-5 py-4"><Lock className="h-5 w-5 text-[#8f4e00]" /><input value={password} onChange={(event) => setPassword(event.target.value)} className="w-full bg-transparent text-base font-semibold outline-none placeholder:text-[#877365]" placeholder="Password" type="password" /></div><button onClick={login} className="mt-4 w-full rounded-full bg-[#8f4e00] py-4 text-base font-bold text-white shadow-lg transition active:scale-95">Login</button><div className="mt-4 rounded-[20px] bg-[#fff1e8] p-4 text-xs font-bold text-[#544437]"><p className="font-black text-[#8f4e00]">Admin test</p><p>7000000001 / Admin@123</p><p>7000000002 / Admin@123</p><p className="mt-2 font-black text-[#8f4e00]">Users</p><p>7000000003 - 7000000012 / User@123</p></div></GlassCard><GlassCard className="p-5"><h2 className="text-lg font-black">Select interests</h2><div className="mt-4 flex flex-wrap gap-2">{INTERESTS.map((item) => { const active = selected.includes(item); return <button key={item} onClick={() => setSelected(active ? selected.filter((x) => x !== item) : [...selected, item])} className={`rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${active ? "bg-[#ff9f43] text-[#2e1500]" : "bg-[#fff1e8] text-[#544437]"}`}>{item}</button>; })}</div></GlassCard></section></main></>;
 }
 
 function SpotlightCard({ ads = [], showToast }) {
@@ -377,14 +575,37 @@ function SpotlightCard({ ads = [], showToast }) {
   );
 }
 
-function CommunityCard({ group, openGroup }) {
+function CommunityCard({ group, openGroup, toggleGroupMembership }) {
   const Icon = group.icon;
   const colorClass = group.color === "mint" ? "bg-[#77f4de] text-[#006f62]" : group.color === "purple" ? "bg-[#e29afd] text-[#692984]" : group.color === "beige" ? "bg-[#f0dfd5] text-[#544437]" : "bg-[#ff9f43] text-[#2e1500]";
-  return <button onClick={() => openGroup(group)} className="rounded-[2rem] bg-white/70 p-5 text-center shadow-[0_8px_24px_rgba(34,26,19,0.05)] backdrop-blur-xl transition active:scale-95"><div className={`mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl ${colorClass}`}><Icon className="h-7 w-7" /></div><h4 className="font-semibold text-[#221a13]">{group.name}</h4><p className="mt-1 text-xs text-[#544437]">{group.members} members</p></button>;
+  const isJoined = group.membersList?.includes(currentUser.uid);
+  const isAdmin = currentUser.role === "admin" || group.admins?.includes(currentUser.uid);
+  const unreadCount = storage.get(unreadKey(group.id), group.unread || 0);
+
+  return (
+    <button onClick={() => openGroup(group)} className="relative rounded-[2rem] bg-white/70 p-5 text-center shadow-[0_8px_24px_rgba(34,26,19,0.05)] backdrop-blur-xl transition active:scale-95">
+      {unreadCount > 0 ? <span className="absolute left-3 top-3 grid h-6 min-w-[24px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">{unreadCount}</span> : null}
+      {isAdmin ? <span className="absolute right-3 top-3 rounded-full bg-[#ffeddc] px-2 py-1 text-[10px] font-black text-[#8f4e00]">ADMIN</span> : null}
+      <div className={`mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl ${colorClass}`}><Icon className="h-7 w-7" /></div>
+      <h4 className="font-semibold text-[#221a13]">{group.name}</h4>
+      <p className="mt-1 text-xs text-[#544437]">{group.members} members</p>
+      {toggleGroupMembership ? (
+        <span
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleGroupMembership(group.id);
+          }}
+          className={`mt-3 inline-flex rounded-full px-4 py-2 text-[11px] font-black ${isJoined ? "bg-[#fff1e8] text-[#8f4e00]" : "bg-[#221a13] text-white"}`}
+        >
+          {isJoined ? "Joined" : "Join"}
+        </span>
+      ) : null}
+    </button>
+  );
 }
 
-function FeedScreen({ setActive, openGroup, showToast, headerProps, ads }) {
-  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><MiniBrandBanner /><SpotlightCard ads={ads} showToast={showToast} /><section className="mt-6 px-4"><div className="mb-5 flex items-end justify-between"><div><h3 className="text-xl font-bold tracking-[-0.03em] text-[#221a13]">Explore Communities</h3><p className="mt-1 text-sm text-[#544437]">Find your tribe among our curated circles.</p></div><button onClick={() => setActive("search")} className="text-xs font-bold text-[#8f4e00] transition active:scale-95">View All</button></div><div className="grid grid-cols-2 gap-4">{BASE_GROUPS.slice(0, 4).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} />)}</div></section><CaptainPrivilege showToast={showToast} /></main></>;
+function FeedScreen({ setActive, openGroup, showToast, headerProps, ads, toggleGroupMembership }) {
+  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><MiniBrandBanner /><SpotlightCard ads={ads} showToast={showToast} /><section className="mt-6 px-4"><div className="mb-5 flex items-end justify-between"><div><h3 className="text-xl font-bold tracking-[-0.03em] text-[#221a13]">Explore Communities</h3><p className="mt-1 text-sm text-[#544437]">Find your tribe among our curated circles.</p></div><div className="flex gap-2"><button onClick={() => setActive("createGroup")} className="rounded-full bg-[#ff9f43] px-3 py-2 text-xs font-black text-[#2e1500] transition active:scale-95">+ Group</button><button onClick={() => setActive("search")} className="rounded-full bg-[#fff1e8] px-3 py-2 text-xs font-bold text-[#8f4e00] transition active:scale-95">View All</button></div></div><div className="grid grid-cols-2 gap-4">{BASE_GROUPS.slice(0, 4).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}</div></section><CaptainPrivilege showToast={showToast} /></main></>;
 }
 
 function CaptainPrivilege({ showToast }) {
@@ -443,7 +664,7 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
       setUploading(false);
     }
   };
-  return <><TopBar {...headerProps} back={() => setActive("feed")} title="Submit Spotlight Request" /><main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]"><div className="relative h-36 overflow-hidden rounded-[24px] bg-[#8f4e00]"><img src={AD_FORM_IMAGE} alt="Submit ad" className="absolute inset-0 h-full w-full object-cover opacity-75" /><div className="absolute inset-0 bg-gradient-to-r from-[#8f4e00]/80 to-transparent" /><h1 className="absolute bottom-5 left-5 text-lg font-bold text-white">Get your brand discovered.</h1></div><FormCard label="Business Name"><input value={business} onChange={(event) => setBusiness(event.target.value)} className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Enter your official business name" /></FormCard><FormCard label="Ad Description"><textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 250))} className="min-h-28 w-full rounded-[24px] border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Tell us about your service or event..." /><p className="mt-3 text-xs font-semibold italic text-[#544437]">Maximum 250 characters.</p></FormCard><FormCard label="Target Category"><div className="flex flex-wrap gap-3">{CATEGORIES.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-5 py-2 text-sm font-semibold transition active:scale-95 ${category === item ? "border-[#8f4e00] bg-[#ffdcc2] text-[#8f4e00]" : "border-[#dac2b1] bg-white text-[#544437]"}`}>{item}</button>)}</div></FormCard><FormCard label="Upload Photo/Video"><label className="grid min-h-44 w-full cursor-pointer place-items-center rounded-[24px] border-2 border-dashed border-[#dac2b1] bg-white text-center transition active:scale-95"><input type="file" accept="image/*,video/*" onChange={selectMedia} className="hidden" />{mediaPreview ? <div className="w-full p-3">{mediaType === "video" ? <video src={mediaPreview} controls className="mx-auto max-h-52 w-full rounded-[20px] object-cover" /> : <img src={mediaPreview} alt="Ad preview" className="mx-auto max-h-52 w-full rounded-[20px] object-cover" />}<p className="mt-3 text-xs font-bold text-[#8f4e00]">{media?.name} · {(media?.size / 1024 / 1024).toFixed(2)}MB</p></div> : <div><div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#f0dfd5]"><ImagePlus className="h-7 w-7 text-[#8f4e00]" /></div><p className="font-semibold">Click to upload image/video</p><p className="mt-1 text-xs text-[#877365]">Images auto-compress · MP4 max 50MB</p></div>}</label></FormCard><p className="flex gap-3 px-2 text-sm text-[#544437]"><Sparkles className="h-5 w-5 shrink-0 text-[#ff9f43]" /> New ads are hidden until approved in Admin Panel.</p><button onClick={submit} disabled={uploading} className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 bg-[#fff8f5] px-4 py-4 disabled:opacity-70"><span className="block rounded-full bg-[#a45d00] py-4 text-base font-bold text-white shadow-lg transition active:scale-95">{uploading ? `Uploading ${uploadProgress}%` : "Submit for Approval ➤"}</span></button></main></>;
+  return <><TopBar {...headerProps} back={() => setActive("feed")} title="Submit Spotlight Request" /><main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]"><div className="relative h-36 overflow-hidden rounded-[24px] bg-[#8f4e00]"><img src={AD_FORM_IMAGE} alt="Submit ad" className="absolute inset-0 h-full w-full object-cover opacity-75" /><div className="absolute inset-0 bg-gradient-to-r from-[#8f4e00]/80 to-transparent" /><h1 className="absolute bottom-5 left-5 text-lg font-bold text-white">Get your brand discovered.</h1></div><FormCard label="Business Name"><input value={business} onChange={(event) => setBusiness(event.target.value)} className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Enter your official business name" /></FormCard><FormCard label="Ad Description"><textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 250))} className="min-h-28 w-full rounded-[24px] border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Tell us about your service or event..." /><p className="mt-3 text-xs font-semibold italic text-[#544437]">Maximum 250 characters.</p></FormCard><FormCard label="Target Category"><div className="flex flex-wrap gap-3">{CATEGORIES.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-5 py-2 text-sm font-semibold transition active:scale-95 ${category === item ? "border-[#8f4e00] bg-[#ffdcc2] text-[#8f4e00]" : "border-[#dac2b1] bg-white text-[#544437]"}`}>{item}</button>)}</div></FormCard><FormCard label="Upload Photo/Video"><label className="grid min-h-44 w-full cursor-pointer place-items-center rounded-[24px] border-2 border-dashed border-[#dac2b1] bg-white text-center transition active:scale-95"><input type="file" accept="image/*,video/*" onChange={selectMedia} className="hidden" />{mediaPreview ? <div className="w-full p-3">{mediaType === "video" ? <video src={mediaPreview} controls className="mx-auto max-h-52 w-full rounded-[20px] object-cover" /> : <img src={mediaPreview} alt="Ad preview" className="mx-auto max-h-52 w-full rounded-[20px] object-cover" />}<p className="mt-3 text-xs font-bold text-[#8f4e00]">{media?.name} · {(media?.size / 1024 / 1024).toFixed(2)}MB</p></div> : <div><div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#f0dfd5]"><ImagePlus className="h-7 w-7 text-[#8f4e00]" /></div><p className="font-semibold">Click to upload image/video</p><p className="mt-1 text-xs text-[#877365]">Images auto-compress · MP4 max 50MB</p></div>}</label></FormCard><p className="flex gap-3 px-2 text-sm text-[#544437]"><Sparkles className="h-5 w-5 shrink-0 text-[#ff9f43]" /> Every member can post up to 5 free ads during the MVP phase. Premium plans will be added later.</p><button onClick={submit} disabled={uploading} className="mb-6 w-full rounded-full bg-[#a45d00] py-4 text-base font-bold text-white shadow-lg transition active:scale-95 disabled:opacity-70">{uploading ? `Uploading ${uploadProgress}%` : "Submit for Approval ➤"}</button></main></>;
 }
 
 function AdminPanelScreen({ setActive, showToast, headerProps, ads, setAds, pendingAds, setPendingAds }) {
@@ -489,10 +710,10 @@ function FormCard({ label, children }) {
   return <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_24px_rgba(34,26,19,0.04)]"><label className="mb-3 block text-xs font-black uppercase tracking-widest text-[#877365]">{label}</label>{children}</div>;
 }
 
-function SearchScreen({ openGroup, headerProps }) {
+function SearchScreen({ openGroup, headerProps, toggleGroupMembership }) {
   const [query, setQuery] = useState("");
   const filtered = BASE_GROUPS.filter((group) => `${group.name} ${group.tag} ${group.area}`.toLowerCase().includes(query.toLowerCase()));
-  return <><TopBar {...headerProps} title="Explore Communities" /><main className="px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]"><div className="flex items-center gap-3 rounded-full border border-[#dac2b1] bg-white px-5 py-4 shadow-sm"><Search className="h-5 w-5 text-[#8f4e00]" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent text-sm font-semibold outline-none" placeholder="Search communities" /></div><div className="mt-6 grid grid-cols-2 gap-4">{filtered.map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} />)}</div></main></>;
+  return <><TopBar {...headerProps} title="Explore Communities" /><main className="px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]"><div className="flex items-center gap-3 rounded-full border border-[#dac2b1] bg-white px-5 py-4 shadow-sm"><Search className="h-5 w-5 text-[#8f4e00]" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent text-sm font-semibold outline-none" placeholder="Search communities" /></div><div className="mt-6 grid grid-cols-2 gap-4">{filtered.map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}</div></main></>;
 }
 
 function DiscoveryCard({ item, showToast }) {
@@ -552,7 +773,7 @@ function TrendingTopicCard({ topic, showToast }) {
   );
 }
 
-function ExploreScreen({ openGroup, showToast, headerProps, ads = [] }) {
+function ExploreScreen({ openGroup, showToast, headerProps, ads = [], toggleGroupMembership }) {
   const [filter, setFilter] = useState("All");
   const filters = ["All", "Trending", "Food", "Jobs", "Buy/Sell", "Safety", "Businesses"];
   const approvedAds = ads.filter((ad) => ad.status === "approved");
@@ -617,7 +838,121 @@ function ExploreScreen({ openGroup, showToast, headerProps, ads = [] }) {
         <section>
           <div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Join Local Groups</h2><button onClick={() => showToast("Showing nearby groups.")} className="text-xs font-black text-[#8f4e00]">View all</button></div>
           <div className="grid grid-cols-2 gap-3">
-            {BASE_GROUPS.slice(0, 4).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} />)}
+            {BASE_GROUPS.slice(0, 4).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+
+function CreateGroupScreen({ setActive, showToast, headerProps, createGroup }) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("Community");
+  const [area, setArea] = useState("Imphal");
+  const [isPrivate, setIsPrivate] = useState(false);
+
+  const submit = () => {
+    const cleanName = name.trim();
+    if (cleanName.length < 3) return showToast("Enter a group name with at least 3 characters.");
+    createGroup({ name: cleanName, category, area, isPrivate });
+    setActive("feed");
+  };
+
+  return (
+    <>
+      <TopBar {...headerProps} back={() => setActive("feed")} title="Create Group" />
+      <main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <GlassCard className="p-5">
+          <h1 className="text-2xl font-black text-[#221a13]">Start a local group</h1>
+          <p className="mt-1 text-sm font-semibold text-[#544437]">Create a free community space for chats, alerts, jobs, food, events, or local interests.</p>
+        </GlassCard>
+
+        <FormCard label="Group Name">
+          <input value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Example: Imphal Guitar Circle" />
+        </FormCard>
+
+        <FormCard label="Category">
+          <div className="flex flex-wrap gap-2">
+            {["Community", "Food", "Jobs", "Events", "Buy/Sell", "Safety", "Tech"].map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${category === item ? "bg-[#ff9f43] text-[#2e1500]" : "bg-[#fff1e8] text-[#544437]"}`}>{item}</button>)}
+          </div>
+        </FormCard>
+
+        <FormCard label="Area">
+          <input value={area} onChange={(event) => setArea(event.target.value)} className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Imphal / Thoubal / Citywide" />
+        </FormCard>
+
+        <button onClick={() => setIsPrivate(!isPrivate)} className="w-full rounded-[24px] bg-white p-5 text-left shadow-[0_8px_24px_rgba(34,26,19,0.04)] transition active:scale-95">
+          <div className="flex items-center justify-between gap-4">
+            <div><h3 className="font-black">Private group</h3><p className="mt-1 text-xs font-semibold text-[#544437]">Members must be invited or approved.</p></div>
+            <div className={`h-7 w-12 rounded-full p-1 ${isPrivate ? "bg-[#ff9f43]" : "bg-[#e7d7cc]"}`}><div className={`h-5 w-5 rounded-full bg-white transition ${isPrivate ? "translate-x-5" : ""}`} /></div>
+          </div>
+        </button>
+
+        <button onClick={submit} className="w-full rounded-full bg-[#221a13] py-4 text-base font-black text-white shadow-lg transition active:scale-95">Create Group</button>
+      </main>
+    </>
+  );
+}
+
+function GroupManageScreen({ activeGroup, setActive, showToast, headerProps, updateGroup }) {
+  const group = activeGroup || BASE_GROUPS[0];
+  const isAdmin = currentUser.role === "admin" || group.admins?.includes(currentUser.uid);
+  const inviteLink = `kchat://join/${group.id}`;
+
+  const togglePrivacy = () => {
+    if (!isAdmin) return showToast("Only group admins can change settings.");
+    updateGroup(group.id, { isPrivate: !group.isPrivate });
+    showToast(group.isPrivate ? "Group changed to public." : "Group changed to private.");
+  };
+
+  const copyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      showToast("Invite link copied.");
+    } catch {
+      showToast(inviteLink);
+    }
+  };
+
+  return (
+    <>
+      <TopBar {...headerProps} back={() => setActive("chat")} title="Group Info" />
+      <main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <GlassCard className="p-5 text-center">
+          <div className="mx-auto mb-4 grid h-20 w-20 place-items-center rounded-[28px] bg-[#fff1e8]"><Users className="h-9 w-9 text-[#8f4e00]" /></div>
+          <h1 className="text-2xl font-black text-[#221a13]">{group.name}</h1>
+          <p className="mt-1 text-sm font-bold text-[#544437]">{group.area} · {group.membersList?.length || group.members} members</p>
+          <div className="mt-4 flex justify-center gap-2">
+            {isAdmin ? <span className="rounded-full bg-[#ffeddc] px-3 py-1 text-xs font-black text-[#8f4e00]">ADMIN</span> : null}
+            <span className="rounded-full bg-[#e9fff9] px-3 py-1 text-xs font-black text-[#006b5e]">{group.isPrivate ? "PRIVATE" : "PUBLIC"}</span>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <h2 className="text-lg font-black">Invite Link</h2>
+          <div className="mt-3 rounded-[20px] bg-[#fff1e8] p-4 text-xs font-bold text-[#544437]">{inviteLink}</div>
+          <button onClick={copyInvite} className="mt-4 w-full rounded-full bg-[#ff9f43] py-3 text-sm font-black text-[#2e1500] transition active:scale-95">Copy Invite Link</button>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div><h3 className="font-black">Private group</h3><p className="mt-1 text-xs font-semibold text-[#544437]">Admins can switch between public and private.</p></div>
+            <button onClick={togglePrivacy} className={`h-7 w-12 rounded-full p-1 ${group.isPrivate ? "bg-[#ff9f43]" : "bg-[#e7d7cc]"}`}><div className={`h-5 w-5 rounded-full bg-white transition ${group.isPrivate ? "translate-x-5" : ""}`} /></button>
+          </div>
+        </GlassCard>
+
+        <section>
+          <h2 className="mb-3 text-lg font-black">Members</h2>
+          <div className="space-y-3">
+            {(group.membersList?.length ? group.membersList : [currentUser.uid]).map((memberId) => (
+              <GlassCard key={memberId} className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#fff1e8]"><User className="h-5 w-5 text-[#8f4e00]" /></div>
+                  <div className="flex-1"><h3 className="font-black">{memberId === currentUser.uid ? currentUser.name : "Group Member"}</h3><p className="text-xs font-bold text-[#544437]">{group.admins?.includes(memberId) ? "Admin" : "Member"}</p></div>
+                </div>
+              </GlassCard>
+            ))}
           </div>
         </section>
       </main>
@@ -631,11 +966,47 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [typingUsers, setTypingUsers] = useState([]);
   const groupId = activeGroup?.id || "private-demo";
   const groupName = activeGroup?.name || "Private Chat";
-  const listRef = useRef(null);
+  const scrollRef = useRef(null);
+  const endRef = useRef(null);
+  const lastNotificationCountRef = useRef(0);
 
-  useEffect(() => appwriteRealtimeChat.subscribe(groupId, groupName, setMessages), [groupId, groupName]);
+  useEffect(() => {
+    const unsubscribe = appwriteRealtimeChat.subscribe(groupId, groupName, setMessages);
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, [groupId, groupName]);
+
+  useEffect(() => {
+    const key = typingKey(groupId);
+    const updateTyping = () => {
+      const now = Date.now();
+      const users = storage.get(key, []).filter((u) => now - u.ts < 3000);
+      storage.set(key, users);
+      setTypingUsers(users.filter((u) => u.uid !== currentUser.uid));
+    };
+
+    updateTyping();
+    const interval = window.setInterval(updateTyping, 1500);
+    const onStorage = (event) => event.key === key && updateTyping();
+    const onLocalSync = (event) => event.detail?.key === key && updateTyping();
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("kchat-storage-sync", onLocalSync);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("kchat-storage-sync", onLocalSync);
+    };
+  }, [groupId]);
+
+  useEffect(() => {
+    return () => cleanupBlobUrls(messages);
+  }, [messages]);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
@@ -649,10 +1020,39 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
   }, []);
 
   useEffect(() => {
-    window.requestAnimationFrame(() => {
-      listRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    });
+    const scrollToBottom = () => {
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    };
+    window.requestAnimationFrame(scrollToBottom);
+    const timer = window.setTimeout(scrollToBottom, 120);
+    return () => window.clearTimeout(timer);
   }, [messages.length, uploading]);
+
+  useEffect(() => {
+    if (!messages.length) return;
+    if (lastNotificationCountRef.current === 0) {
+      lastNotificationCountRef.current = messages.length;
+      return;
+    }
+    if (messages.length > lastNotificationCountRef.current) {
+      notifyIncomingMessage(groupName, messages[messages.length - 1]);
+    }
+    lastNotificationCountRef.current = messages.length;
+  }, [messages, groupName]);
+
+  const updateTypingState = (isTyping) => {
+    const key = typingKey(groupId);
+    const current = storage.get(key, []);
+    const filtered = current.filter((u) => u.uid !== currentUser.uid);
+
+    if (isTyping) {
+      filtered.push({ uid: currentUser.uid, name: currentUser.name, ts: Date.now() });
+    }
+
+    storage.set(key, filtered);
+  };
 
   const send = async () => {
     const body = text.trim();
@@ -663,9 +1063,10 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
       senderName: currentUser.name,
       body,
       createdAt: Date.now(),
-      status: online ? "sent" : "queued",
+      status: online ? "delivered" : "queued",
     });
     setText("");
+    updateTypingState(false);
     showToast(appwriteRealtimeChat.isConfigured() ? "Message sent via Appwrite realtime." : "Message sent in demo sync.");
   };
 
@@ -684,7 +1085,7 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
         senderName: currentUser.name,
         body: mediaType === "video" ? "Shared a video" : "Shared an image",
         createdAt: Date.now(),
-        status: online ? "sent" : "queued",
+        status: online ? "delivered" : "queued",
         mediaUrl: result.url,
         mediaType,
       });
@@ -701,13 +1102,13 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
   return (
     <>
       <TopBar {...headerProps} title={groupName} />
-      <main className="space-y-4 px-4 pb-[210px] pt-[calc(env(safe-area-inset-top)+88px)]">
+      <main ref={scrollRef} className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+64px)] bottom-[calc(env(safe-area-inset-bottom)+176px)] z-10 w-full max-w-[430px] -translate-x-1/2 space-y-4 overflow-y-auto px-4 pb-6 pt-6">
         <div className="flex justify-between rounded-[22px] bg-white/80 px-4 py-3 text-xs font-black text-[#544437] shadow-sm">
           <span className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-green-500" : "bg-orange-400"}`} />
             {online ? "Realtime connected" : "Offline queue active"}
           </span>
-          <span>{appwriteRealtimeChat.isConfigured() ? "Appwrite live" : "Demo sync"}</span>
+          <button onClick={() => headerProps.setActive("groupManage")} className="rounded-full bg-[#fff1e8] px-3 py-1 text-[11px] font-black text-[#8f4e00] transition active:scale-95">Group Info</button>
         </div>
 
         {messages.map((message) => {
@@ -720,12 +1121,18 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
                 {message.mediaUrl && message.mediaType === "video" ? <video src={message.mediaUrl} controls className="mt-2 max-h-56 w-full rounded-[18px]" /> : null}
                 <p className="mt-1 text-sm font-semibold">{message.body}</p>
                 <p className={`mt-2 text-[11px] font-bold ${isMe ? "text-right text-white/80" : "text-[#877365]"}`}>
-                  {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {isMe ? "✓" : ""}
+                  {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {isMe ? messageStatusIcon(message.status) : ""}
                 </p>
               </div>
             </div>
           );
         })}
+
+        {typingUsers.length > 0 && (
+          <div className="rounded-[22px] bg-white/80 px-4 py-3 text-xs font-black text-[#8f4e00] shadow-sm">
+            {typingUsers[0].name} is typing...
+          </div>
+        )}
 
         {uploading ? (
           <div className="rounded-[22px] bg-white/80 px-4 py-3 shadow-sm">
@@ -739,16 +1146,16 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
           </div>
         ) : null}
 
-        <div ref={listRef} className="h-2" />
+        <div ref={endRef} className="h-4" />
       </main>
 
-      <div className="fixed bottom-[96px] left-1/2 z-40 flex w-full max-w-[430px] -translate-x-1/2 gap-2 border-t border-[#f0dfd5] bg-[#fff8f5]/95 px-4 py-3 backdrop-blur-xl">
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+92px)] left-1/2 z-40 flex w-full max-w-[430px] -translate-x-1/2 gap-2 border-t border-[#f0dfd5] bg-[#fff8f5]/95 px-4 py-3 backdrop-blur-xl shadow-[0_-10px_24px_rgba(34,26,19,0.06)]">
         <label className="grid h-14 w-14 place-items-center rounded-[22px] bg-white text-[#8f4e00] shadow-lg active:scale-95">
           <input type="file" accept="image/*,video/*" onChange={sendMedia} className="hidden" disabled={uploading} />
           <Camera className="h-5 w-5" />
         </label>
         <div className="flex flex-1 items-center rounded-[26px] bg-white px-4 py-3 shadow-lg">
-          <input value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") send(); }} className="w-full bg-transparent text-sm font-semibold outline-none" placeholder="Message..." />
+          <input value={text} onChange={(event) => { setText(event.target.value); updateTypingState(Boolean(event.target.value.trim())); }} onKeyDown={(event) => { if (event.key === "Enter") send(); }} className="w-full bg-transparent text-sm font-semibold outline-none" placeholder="Message..." />
         </div>
         <button onClick={send} className="grid h-14 w-14 place-items-center rounded-[22px] bg-[#ff9f43] text-white shadow-lg">
           <Send className="h-5 w-5" />
@@ -769,7 +1176,7 @@ function ProfileScreen({ showToast, headerProps }) {
     { Icon: Wifi, title: "Network protocol", subtitle: "Use nearby local discovery", enabled: true },
     { Icon: Bell, title: "Safety alerts", subtitle: "Receive urgent community reports", enabled: false },
   ]);
-  return <><TopBar {...headerProps} title="Profile" /><main className="space-y-4 px-4 pb-32 pt-24"><GlassCard className="p-6 text-center"><div className="mx-auto mb-4 flex justify-center"><KChatLogoMark size={96} /></div><h2 className="mt-4 text-2xl font-black">Kanglei Member</h2><p className="mt-1 text-sm font-bold text-[#544437]">Imphal East · Trust score 720</p><button onClick={() => showToast("Profile editor opened.")} className="mt-5 rounded-full bg-[#221a13] px-6 py-3 text-sm font-black text-white">Edit profile</button></GlassCard>{settings.map(({ Icon, title, subtitle, enabled }, index) => <button key={title} onClick={() => setSettings(settings.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: !item.enabled } : item))} className="w-full text-left transition active:scale-95"><GlassCard className="p-4"><div className="flex items-center gap-4"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e8]"><Icon className="h-6 w-6 text-[#8f4e00]" /></div><div className="flex-1"><h3 className="font-black">{title}</h3><p className="text-xs font-semibold text-[#544437]">{subtitle}</p></div><div className={`h-7 w-12 rounded-full p-1 ${enabled ? "bg-[#ff9f43]" : "bg-[#e7d7cc]"}`}><div className={`h-5 w-5 rounded-full bg-white transition ${enabled ? "translate-x-5" : ""}`} /></div></div></GlassCard></button>)}</main></>;
+  return <><TopBar {...headerProps} title="Profile" /><main className="space-y-4 px-4 pb-32 pt-24"><GlassCard className="p-6 text-center"><div className="mx-auto mb-4 flex justify-center"><KChatLogoMark size={96} /></div><h2 className="mt-4 text-2xl font-black">{currentUser.name}</h2><p className="mt-1 text-sm font-bold text-[#544437]">{currentUser.role === "admin" ? "Admin Account" : "Test User"} · {currentUser.phone}</p><div className="mt-5 flex justify-center gap-2"><button onClick={() => showToast("Profile editor opened.")} className="rounded-full bg-[#221a13] px-5 py-3 text-sm font-black text-white">Edit profile</button><button onClick={() => requestNotificationPermission(showToast)} className="rounded-full bg-[#ff9f43] px-5 py-3 text-sm font-black text-[#2e1500]">Enable alerts</button></div></GlassCard>{settings.map(({ Icon, title, subtitle, enabled }, index) => <button key={title} onClick={() => setSettings(settings.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: !item.enabled } : item))} className="w-full text-left transition active:scale-95"><GlassCard className="p-4"><div className="flex items-center gap-4"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e8]"><Icon className="h-6 w-6 text-[#8f4e00]" /></div><div className="flex-1"><h3 className="font-black">{title}</h3><p className="text-xs font-semibold text-[#544437]">{subtitle}</p></div><div className={`h-7 w-12 rounded-full p-1 ${enabled ? "bg-[#ff9f43]" : "bg-[#e7d7cc]"}`}><div className={`h-5 w-5 rounded-full bg-white transition ${enabled ? "translate-x-5" : ""}`} /></div></div></GlassCard></button>)}</main></>;
 }
 
 export default function KangleiChatMobileMVP() {
@@ -810,7 +1217,7 @@ export default function KangleiChatMobileMVP() {
 
     const handleBack = async (exitApp) => {
       const currentScreen = screenRef.current;
-      if (["chat", "search", "tiers", "sponsorForm", "admin", "explore", "profile"].includes(currentScreen)) {
+      if (["chat", "search", "tiers", "sponsorForm", "admin", "explore", "profile", "createGroup", "groupManage"].includes(currentScreen)) {
         setActive("feed");
         safePushFeedState();
         return;
@@ -850,22 +1257,69 @@ export default function KangleiChatMobileMVP() {
     };
   }, []);
 
-  const resetApp = () => { storage.set("kchat_logged_in", false); storage.set("kchat_ads", DEFAULT_ADS); storage.set("kchat_pending_ads", DEFAULT_PENDING_ADS); setAds(DEFAULT_ADS); setPendingAds(DEFAULT_PENDING_ADS); setDrawerOpen(false); setActive("onboarding"); showToast("Demo session reset."); };
-  const openGroup = (group) => { setActiveGroup(group); setActive("chat"); showToast(`Opened ${group.name}`); };
+  const resetApp = () => { storage.set("kchat_current_user", null); storage.set("kchat_logged_in", false); storage.set("kchat_ads", DEFAULT_ADS); storage.set("kchat_pending_ads", DEFAULT_PENDING_ADS); storage.set(GROUPS_KEY, DEFAULT_GROUPS); setAds(DEFAULT_ADS); setPendingAds(DEFAULT_PENDING_ADS); setDrawerOpen(false); setActive("onboarding"); showToast("Demo session reset."); };
+  const toggleGroupMembership = (groupId) => {
+    const groups = normalizeGroups(storage.get(GROUPS_KEY, BASE_GROUPS));
+    const updatedGroups = groups.map((group) => {
+      if (group.id !== groupId) return group;
+      const currentMembers = group.membersList || [];
+      const joined = currentMembers.includes(currentUser.uid);
+      const nextMembers = joined ? currentMembers.filter((id) => id !== currentUser.uid) : [...currentMembers, currentUser.uid];
+      return { ...group, membersList: nextMembers, members: nextMembers.length ? String(nextMembers.length) : group.members };
+    });
+    storage.set(GROUPS_KEY, updatedGroups);
+    showToast("Group membership updated. Refreshing groups...");
+  };
+  const createGroup = ({ name, category, area, isPrivate }) => {
+    const groups = normalizeGroups(storage.get(GROUPS_KEY, BASE_GROUPS));
+    const newGroup = {
+      id: Date.now(),
+      name,
+      area: area || "Imphal",
+      members: "1",
+      tag: category,
+      unread: 0,
+      health: 100,
+      icon: Users,
+      color: "mint",
+      membersList: [currentUser.uid],
+      isPrivate,
+      createdBy: currentUser.uid,
+      admins: [currentUser.uid],
+    };
+    const updatedGroups = [newGroup, ...groups];
+    storage.set(GROUPS_KEY, updatedGroups);
+    showToast("Group created successfully.");
+  };
+  const updateGroup = (groupId, patch) => {
+    const groups = normalizeGroups(storage.get(GROUPS_KEY, BASE_GROUPS));
+    const updatedGroups = groups.map((group) => group.id === groupId ? { ...group, ...patch } : group);
+    storage.set(GROUPS_KEY, updatedGroups);
+    const updatedActive = updatedGroups.find((group) => group.id === activeGroup?.id);
+    if (updatedActive) setActiveGroup(updatedActive);
+  };
+  const openGroup = (group) => {
+    storage.set(unreadKey(group.id), 0);
+    setActiveGroup(group);
+    setActive("chat");
+    showToast(`Opened ${group.name}`);
+  };
   const headerProps = { setActive, openMenu: () => setDrawerOpen(true) };
   const navActive = active === "explore" || active === "profile" ? active : "feed";
 
   const content = useMemo(() => {
     if (active === "onboarding") return <OnboardingScreen setActive={setActive} showToast={showToast} headerProps={headerProps} />;
-    if (active === "feed") return <FeedScreen setActive={setActive} openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} />;
-    if (active === "search") return <SearchScreen openGroup={openGroup} headerProps={headerProps} />;
-    if (active === "explore") return <ExploreScreen openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} />;
+    if (active === "feed") return <FeedScreen setActive={setActive} openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
+    if (active === "search") return <SearchScreen openGroup={openGroup} headerProps={headerProps} toggleGroupMembership={toggleGroupMembership} />;
+    if (active === "explore") return <ExploreScreen openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
     if (active === "chat") return <ChatScreen activeGroup={activeGroup} showToast={showToast} headerProps={headerProps} />;
+    if (active === "groupManage") return <GroupManageScreen activeGroup={activeGroup} setActive={setActive} showToast={showToast} headerProps={headerProps} updateGroup={updateGroup} />;
+    if (active === "createGroup") return <CreateGroupScreen setActive={setActive} showToast={showToast} headerProps={headerProps} createGroup={createGroup} />;
     if (active === "tiers") return <TiersScreen showToast={showToast} headerProps={headerProps} />;
     if (active === "profile") return <ProfileScreen showToast={showToast} headerProps={headerProps} />;
     if (active === "sponsorForm") return <SponsorRequestScreen setActive={setActive} showToast={showToast} headerProps={headerProps} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
     if (active === "admin") return <AdminPanelScreen setActive={setActive} showToast={showToast} headerProps={headerProps} ads={ads} setAds={setAds} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
-    return <FeedScreen setActive={setActive} openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} />;
+    return <FeedScreen setActive={setActive} openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
   }, [active, activeGroup, ads, pendingAds]);
 
   return (

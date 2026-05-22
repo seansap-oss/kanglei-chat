@@ -22,5 +22,3 @@ window.__kchatAppwrite = {
   ID,
   Query,
 };
-
-export { client, tablesDB, storage, ID, Query };
