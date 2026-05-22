@@ -605,7 +605,7 @@ function CommunityCard({ group, openGroup, toggleGroupMembership }) {
 }
 
 function FeedScreen({ setActive, openGroup, openAd, showToast, headerProps, ads, toggleGroupMembership }) {
-  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><SpotlightCard ads={ads} showToast={showToast} setActive={setActive} openAd={openAd} /><section className="mt-6 px-4"><div className="mb-5 flex items-end justify-between"><div><h3 className="text-xl font-bold tracking-[-0.03em] text-[#221a13]">Explore Communities</h3><p className="mt-1 text-sm text-[#544437]">Find your tribe among our curated circles.</p></div><div className="flex gap-2"><button onClick={() => setActive("createGroup")} className="rounded-full bg-[#ff9f43] px-3 py-2 text-xs font-black text-[#2e1500] transition active:scale-95">+ Group</button><button onClick={() => setActive("search")} className="rounded-full bg-[#fff1e8] px-3 py-2 text-xs font-bold text-[#8f4e00] transition active:scale-95">View All</button></div></div><div className="grid grid-cols-3 gap-3">{BASE_GROUPS.slice(0, 6).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}</div></section><CaptainPrivilege showToast={showToast} /></main></>;
+  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><MiniBrandBanner /><SpotlightCard ads={ads} showToast={showToast} setActive={setActive} openAd={openAd} /><section className="mt-6 px-4"><div className="mb-5 flex items-end justify-between"><div><h3 className="text-xl font-bold tracking-[-0.03em] text-[#221a13]">Explore Communities</h3><p className="mt-1 text-sm text-[#544437]">Find your tribe among our curated circles.</p></div><div className="flex gap-2"><button onClick={() => setActive("createGroup")} className="rounded-full bg-[#ff9f43] px-3 py-2 text-xs font-black text-[#2e1500] transition active:scale-95">+ Group</button><button onClick={() => setActive("search")} className="rounded-full bg-[#fff1e8] px-3 py-2 text-xs font-bold text-[#8f4e00] transition active:scale-95">View All</button></div></div><div className="grid grid-cols-3 gap-3">{BASE_GROUPS.slice(0, 6).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}</div></section><CaptainPrivilege showToast={showToast} /></main></>;
 }
 
 function CaptainPrivilege({ showToast }) {
@@ -1280,61 +1280,14 @@ function TiersScreen({ showToast, headerProps }) {
   return <><TopBar {...headerProps} title="Captain Privilege" /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><CaptainPrivilege showToast={showToast} /></main></>;
 }
 
-
-function ProfileScreen({ showToast, headerProps, setActive }) {
+function ProfileScreen({ showToast, headerProps }) {
   const [settings, setSettings] = useState([
     { Icon: ShieldCheck, title: "Verified identity", subtitle: "Phone verified and trusted profile", enabled: true },
     { Icon: Lock, title: "Encrypted chats", subtitle: "Private and group messages protected", enabled: true },
     { Icon: Wifi, title: "Network protocol", subtitle: "Use nearby local discovery", enabled: true },
     { Icon: Bell, title: "Safety alerts", subtitle: "Receive urgent community reports", enabled: false },
   ]);
-
-  const logout = () => {
-    storage.set("kchat_current_user", null);
-    storage.set("kchat_logged_in", false);
-    showToast("Logged out.");
-    setTimeout(() => window.location.reload(), 500);
-  };
-
-  return (
-    <>
-      <TopBar {...headerProps} title="Profile" />
-      <main className="space-y-4 px-4 pb-32 pt-24">
-        <GlassCard className="p-6 text-center">
-          <div className="mx-auto mb-4 flex justify-center"><KChatLogoMark size={96} /></div>
-          <h2 className="mt-4 text-2xl font-black">{currentUser.name}</h2>
-          <p className="mt-1 text-sm font-bold text-[#544437]">{currentUser.role === "admin" ? "Admin Account" : "Test User"} · {currentUser.phone}</p>
-
-          <div className="mt-5 flex justify-center gap-2">
-            <button onClick={() => showToast("Profile editor will be added next.")} className="rounded-full bg-[#221a13] px-5 py-3 text-sm font-black text-white">Edit profile</button>
-            <button onClick={() => requestNotificationPermission(showToast)} className="rounded-full bg-[#ff9f43] px-5 py-3 text-sm font-black text-[#2e1500]">Enable alerts</button>
-          </div>
-        </GlassCard>
-
-        {currentUser.role === "admin" ? (
-          <button onClick={() => setActive("admin")} className="w-full rounded-[24px] bg-[#ff9f43] p-4 text-center font-black text-[#2e1500] transition active:scale-95">
-            Open Admin Panel
-          </button>
-        ) : null}
-
-        {settings.map(({ Icon, title, subtitle, enabled }, index) => (
-          <button key={title} onClick={() => setSettings(settings.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: !item.enabled } : item))} className="w-full text-left transition active:scale-95">
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e8]"><Icon className="h-6 w-6 text-[#8f4e00]" /></div>
-                <div className="flex-1"><h3 className="font-black">{title}</h3><p className="text-xs font-semibold text-[#544437]">{subtitle}</p></div>
-                <div className={`h-7 w-12 rounded-full p-1 ${enabled ? "bg-[#ff9f43]" : "bg-[#e7d7cc]"}`}><div className={`h-5 w-5 rounded-full bg-white transition ${enabled ? "translate-x-5" : ""}`} /></div>
-              </div>
-            </GlassCard>
-          </button>
-        ))}
-
-        <button onClick={logout} className="w-full rounded-[24px] bg-red-600 p-4 text-center font-black text-white transition active:scale-95">
-          Logout
-        </button>
-      </main>
-    </>
-  );
+  return <><TopBar {...headerProps} title="Profile" /><main className="space-y-4 px-4 pb-32 pt-24"><GlassCard className="p-6 text-center"><div className="mx-auto mb-4 flex justify-center"><KChatLogoMark size={96} /></div><h2 className="mt-4 text-2xl font-black">{currentUser.name}</h2><p className="mt-1 text-sm font-bold text-[#544437]">{currentUser.role === "admin" ? "Admin Account" : "Test User"} · {currentUser.phone}</p><div className="mt-5 flex justify-center gap-2"><button onClick={() => showToast("Profile editor opened.")} className="rounded-full bg-[#221a13] px-5 py-3 text-sm font-black text-white">Edit profile</button><button onClick={() => requestNotificationPermission(showToast)} className="rounded-full bg-[#ff9f43] px-5 py-3 text-sm font-black text-[#2e1500]">Enable alerts</button></div></GlassCard>{settings.map(({ Icon, title, subtitle, enabled }, index) => <button key={title} onClick={() => setSettings(settings.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: !item.enabled } : item))} className="w-full text-left transition active:scale-95"><GlassCard className="p-4"><div className="flex items-center gap-4"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e8]"><Icon className="h-6 w-6 text-[#8f4e00]" /></div><div className="flex-1"><h3 className="font-black">{title}</h3><p className="text-xs font-semibold text-[#544437]">{subtitle}</p></div><div className={`h-7 w-12 rounded-full p-1 ${enabled ? "bg-[#ff9f43]" : "bg-[#e7d7cc]"}`}><div className={`h-5 w-5 rounded-full bg-white transition ${enabled ? "translate-x-5" : ""}`} /></div></div></GlassCard></button>)}</main></>;
 }
 
 export default function KangleiChatMobileMVP() {
@@ -1481,7 +1434,7 @@ const openAd = (ad) => {
     if (active === "groupManage") return <GroupManageScreen activeGroup={activeGroup} setActive={setActive} showToast={showToast} headerProps={headerProps} updateGroup={updateGroup} />;
     if (active === "createGroup") return <CreateGroupScreen setActive={setActive} showToast={showToast} headerProps={headerProps} createGroup={createGroup} />;
     if (active === "tiers") return <TiersScreen showToast={showToast} headerProps={headerProps} />;
-    if (active === "profile") return <ProfileScreen showToast={showToast} headerProps={headerProps} setActive={setActive} />;
+    if (active === "profile") return <ProfileScreen showToast={showToast} headerProps={headerProps} />;
     if (active === "sponsorForm") return <SponsorRequestScreen setActive={setActive} showToast={showToast} headerProps={headerProps} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
     if (active === "admin") return <AdminPanelScreen setActive={setActive} showToast={showToast} headerProps={headerProps} ads={ads} setAds={setAds} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
     return <FeedScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
