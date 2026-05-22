@@ -429,7 +429,7 @@ function GlassCard({ children, className = "" }) {
   return <div className={`rounded-[2rem] border border-white/55 bg-white/70 shadow-[0_8px_28px_rgba(34,26,19,0.06)] backdrop-blur-xl ${className}`}>{children}</div>;
 }
 
-function TopBar({ setActive, openMenu, back, title }) {
+function TopBar({ setActive, openMenu, back, title, showUserIcon }) {
   return (
     <header className="fixed left-1/2 top-0 z-50 flex h-[calc(env(safe-area-inset-top)+64px)] w-full max-w-[430px] -translate-x-1/2 items-end justify-between border-b border-[#f0dfd5]/70 bg-[#fff8f5]/85 px-4 pb-3 backdrop-blur-xl shadow-sm">
       <div className="flex items-center gap-3">
@@ -441,6 +441,7 @@ function TopBar({ setActive, openMenu, back, title }) {
       </div>
       <div className="flex items-center gap-1">
         <button onClick={() => setActive("search")} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="Search"><Search className="h-5 w-5" /></button>
+        {showUserIcon ? <button onClick={() => setActive("profile")} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="User profile"><User className="h-5 w-5" /></button> : null}
         {!back ? <button onClick={openMenu} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="Menu"><Menu className="h-5 w-5" /></button> : null}
       </div>
     </header>
@@ -651,7 +652,7 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
         uploadedUrl = result.url;
         uploadedType = result.file.type.startsWith("video/") ? "video" : "image";
       }
-      const newAd = { id: Date.now(), type: uploadedType, business: business.trim(), title: description.slice(0, 42), subtitle: description, cta: uploadedType === "video" ? "Watch Ad" : "View Offer", mediaUrl: uploadedUrl, category, status: "pending", price: "Sponsored", location: "Imphal", likes: 0, comments: 0 };
+      const newAd = { id: Date.now(), type: uploadedType, business: business.trim(), title: description.slice(0, 42), subtitle: description, cta: uploadedType === "video" ? "Watch Ad" : "View Offer", mediaUrl: uploadedUrl, category, status: "pending", price: "Sponsored", location: "Imphal", likes: 0, comments: 0, submittedBy: currentUser.uid };
       const updated = [newAd, ...pendingAds];
       setPendingAds(updated);
       storage.set("kchat_pending_ads", updated);
@@ -1275,13 +1276,60 @@ function AllAdsScreen({ ads = [], setActive, openAd, headerProps }) {
   );
 }
 
+function PendingAdsScreen({ pendingAds = [], setActive, headerProps, showToast }) {
+  const userAds = pendingAds.filter((ad) => ad.submittedBy === currentUser.uid);
+
+  return (
+    <>
+      <TopBar {...headerProps} back={() => setActive("profile")} title="Pending Ads" />
+      <main className="space-y-4 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <div>
+          <h1 className="text-2xl font-black text-[#221a13]">Pending Approval</h1>
+          <p className="mt-1 text-sm font-semibold text-[#544437]">Ads you submitted and are waiting for review.</p>
+        </div>
+
+        {userAds.length ? (
+          <div className="space-y-3">
+            {userAds.map((ad) => (
+              <GlassCard key={ad.id} className="overflow-hidden">
+                <button onClick={() => showToast(`${ad.title} is still pending approval.`)} className="flex w-full gap-3 p-3 text-left transition active:scale-[0.99]">
+                  <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-[20px] bg-gradient-to-br from-[#ffdcc2] to-[#f8d8ff]">
+                    {ad.mediaUrl ? (
+                      ad.type === "video" ? (
+                        <video src={ad.mediaUrl} className="h-full w-full object-cover" />
+                      ) : (
+                        <img src={ad.mediaUrl} alt={ad.title} className="h-full w-full object-cover" />
+                      )
+                    ) : (
+                      <KChatLogoMark size={46} />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="rounded-full bg-[#fff1e8] px-2 py-1 text-[10px] font-black uppercase text-[#8f4e00]">Pending</span>
+                    <h3 className="mt-2 line-clamp-1 font-black">{ad.title}</h3>
+                    <p className="mt-1 line-clamp-2 text-xs font-semibold text-[#544437]">{ad.subtitle}</p>
+                    <p className="mt-2 flex items-center gap-1 text-xs font-black text-[#8f4e00]"><MapPin className="h-3 w-3" /> {ad.location || "Imphal"}</p>
+                  </div>
+                </button>
+              </GlassCard>
+            ))}
+          </div>
+        ) : (
+          <GlassCard className="p-5 text-center text-sm font-bold text-[#544437]">
+            You don’t have any ads waiting for approval yet. Submit a new spotlight request to get featured.
+          </GlassCard>
+        )}
+      </main>
+    </>
+  );
+}
 
 function TiersScreen({ showToast, headerProps }) {
   return <><TopBar {...headerProps} title="Captain Privilege" /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><CaptainPrivilege showToast={showToast} /></main></>;
 }
 
 
-function ProfileScreen({ showToast, headerProps, setActive }) {
+function ProfileScreen({ showToast, headerProps, setActive, setIsLoggedIn, pendingAdsCount }) {
   const [settings, setSettings] = useState([
     { Icon: ShieldCheck, title: "Verified identity", subtitle: "Phone verified and trusted profile", enabled: true },
     { Icon: Lock, title: "Encrypted chats", subtitle: "Private and group messages protected", enabled: true },
@@ -1292,8 +1340,10 @@ function ProfileScreen({ showToast, headerProps, setActive }) {
   const logout = () => {
     storage.set("kchat_current_user", null);
     storage.set("kchat_logged_in", false);
+    
+    setActive("onboarding");
     showToast("Logged out.");
-    setTimeout(() => window.location.reload(), 500);
+    setTimeout(() => window.location.reload(), 300);
   };
 
   return (
@@ -1304,12 +1354,22 @@ function ProfileScreen({ showToast, headerProps, setActive }) {
           <div className="mx-auto mb-4 flex justify-center"><KChatLogoMark size={96} /></div>
           <h2 className="mt-4 text-2xl font-black">{currentUser.name}</h2>
           <p className="mt-1 text-sm font-bold text-[#544437]">{currentUser.role === "admin" ? "Admin Account" : "Test User"} · {currentUser.phone}</p>
+          <div className="mt-4 grid gap-2 text-sm text-[#544437]">
+            <div className="inline-flex items-center justify-center gap-2 rounded-full bg-[#fff1e8] px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#8f4e00]">Profile status</div>
+            <div className="rounded-[20px] bg-[#fff4d9] p-3 text-left text-sm font-semibold text-[#6a4d18]">{pendingAdsCount > 0 ? `You have ${pendingAdsCount} ads waiting for approval.` : "No pending ads yet. Submit a spotlight request to get featured."}</div>
+          </div>
 
-          <div className="mt-5 flex justify-center gap-2">
-            <button onClick={() => showToast("Profile editor will be added next.")} className="rounded-full bg-[#221a13] px-5 py-3 text-sm font-black text-white">Edit profile</button>
-            <button onClick={() => requestNotificationPermission(showToast)} className="rounded-full bg-[#ff9f43] px-5 py-3 text-sm font-black text-[#2e1500]">Enable alerts</button>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <button onClick={() => showToast("Profile editor will be added next.")} className="rounded-full bg-[#221a13] px-5 py-3 text-sm font-black text-white transition active:scale-95">Edit profile</button>
+            <button onClick={() => requestNotificationPermission(showToast)} className="rounded-full bg-[#ff9f43] px-5 py-3 text-sm font-black text-[#2e1500] transition active:scale-95">Enable alerts</button>
           </div>
         </GlassCard>
+
+        {pendingAdsCount > 0 ? (
+          <button onClick={() => setActive("pendingAds")} className="w-full rounded-[24px] bg-[#221a13] p-4 text-center font-black text-white transition active:scale-95">
+            View pending ads ({pendingAdsCount})
+          </button>
+        ) : null}
 
         {currentUser.role === "admin" ? (
           <button onClick={() => setActive("admin")} className="w-full rounded-[24px] bg-[#ff9f43] p-4 text-center font-black text-[#2e1500] transition active:scale-95">
@@ -1339,6 +1399,7 @@ function ProfileScreen({ showToast, headerProps, setActive }) {
 
 export default function KangleiChatMobileMVP() {
   const [active, setActive] = useState(storage.get("kchat_logged_in", false) ? "feed" : "onboarding");
+  const [isLoggedIn, setIsLoggedIn] = useState(storage.get("kchat_logged_in", false));
   const [toast, setToast] = useState("");
   const [activeGroup, setActiveGroup] = useState(BASE_GROUPS[0]);
   const [selectedAd, setSelectedAd] = useState(null);
@@ -1348,10 +1409,11 @@ export default function KangleiChatMobileMVP() {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const screenRef = useRef(active);
   const lastBackPressRef = useRef(0);
-const openAd = (ad) => {
-  setSelectedAd(ad);
-  setActive("adDetail");
-};
+  const openAd = (ad) => {
+    setSelectedAd(ad);
+    setActive("adDetail");
+  };
+  const userPendingAdsCount = pendingAds.filter((ad) => ad.submittedBy === currentUser.uid).length;
 
   const showToast = (message) => {
     setToast(message);
@@ -1380,7 +1442,7 @@ const openAd = (ad) => {
 
     const handleBack = async (exitApp) => {
       const currentScreen = screenRef.current;
-      if (["chat", "search", "tiers", "sponsorForm", "admin", "explore", "profile", "createGroup", "groupManage", "allAds", "adDetail"].includes(currentScreen)) {
+      if (["chat", "search", "tiers", "sponsorForm", "admin", "explore", "profile", "createGroup", "groupManage", "allAds", "adDetail", "pendingAds"].includes(currentScreen)) {
         setActive("feed");
         safePushFeedState();
         return;
@@ -1467,10 +1529,11 @@ const openAd = (ad) => {
     setActive("chat");
     showToast(`Opened ${group.name}`);
   };
-  const headerProps = { setActive, openMenu: () => setDrawerOpen(true) };
+  const headerProps = { setActive, openMenu: () => setDrawerOpen(true), showUserIcon: isLoggedIn };
   const navActive = active === "explore" || active === "profile" ? active : "feed";
 
   const content = useMemo(() => {
+    if (!isLoggedIn) return <OnboardingScreen setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "onboarding") return <OnboardingScreen setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "feed") return <FeedScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
     if (active === "allAds") return <AllAdsScreen ads={ads} setActive={setActive} openAd={openAd} headerProps={headerProps} />;
@@ -1481,11 +1544,12 @@ const openAd = (ad) => {
     if (active === "groupManage") return <GroupManageScreen activeGroup={activeGroup} setActive={setActive} showToast={showToast} headerProps={headerProps} updateGroup={updateGroup} />;
     if (active === "createGroup") return <CreateGroupScreen setActive={setActive} showToast={showToast} headerProps={headerProps} createGroup={createGroup} />;
     if (active === "tiers") return <TiersScreen showToast={showToast} headerProps={headerProps} />;
-    if (active === "profile") return <ProfileScreen showToast={showToast} headerProps={headerProps} setActive={setActive} />;
+    if (active === "profile") return <ProfileScreen showToast={showToast} headerProps={headerProps} setActive={setActive} setIsLoggedIn={setIsLoggedIn} pendingAdsCount={userPendingAdsCount} />;
+    if (active === "pendingAds") return <PendingAdsScreen pendingAds={pendingAds} setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "sponsorForm") return <SponsorRequestScreen setActive={setActive} showToast={showToast} headerProps={headerProps} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
     if (active === "admin") return <AdminPanelScreen setActive={setActive} showToast={showToast} headerProps={headerProps} ads={ads} setAds={setAds} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
     return <FeedScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
-  }, [active, activeGroup, ads, pendingAds, selectedAd]);
+  }, [active, activeGroup, ads, pendingAds, selectedAd, isLoggedIn]);
 
   return (
     <ErrorBoundary>
