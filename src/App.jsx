@@ -25,13 +25,14 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { Client, TablesDB, Storage, Realtime, Channel, ID, Query } from "appwrite";
+import { Client, Databases, Storage, ID, Query } from "appwrite";
 
 const APPWRITE_CONFIG = {
   endpoint: "https://sgp.cloud.appwrite.io/v1",
   projectId: "6a0ed0800035c0b14fb4",
   databaseId: "6a0ed0be00162f498d5d",
   messagesCollectionId: "messages",
+  adsCollectionId: "ads",
   bucketId: "chat_media",
 };
 
@@ -42,10 +43,8 @@ const appwriteClient = new Client()
 window.__kchatConfig = APPWRITE_CONFIG;
 window.__kchatAppwrite = {
   client: appwriteClient,
-  tablesDB: new TablesDB(appwriteClient),
+  db: new Databases(appwriteClient),
   storage: new Storage(appwriteClient),
-  realtime: new Realtime(appwriteClient),
-  Channel,
   ID,
   Query,
 };
@@ -281,6 +280,7 @@ const appwriteConfig = {
   projectId: APPWRITE_CONFIG.projectId,
   databaseId: APPWRITE_CONFIG.databaseId,
   messagesCollectionId: APPWRITE_CONFIG.messagesCollectionId,
+  adsCollectionId: APPWRITE_CONFIG.adsCollectionId,
   groupsCollectionId: "groups",
   bucketId: APPWRITE_CONFIG.bucketId,
 };
@@ -323,45 +323,45 @@ function cleanupBlobUrls(messages = []) {
 
 const appwriteRealtimeChat = {
   isConfigured() {
-    return Boolean(window.__kchatAppwrite?.client && window.__kchatAppwrite?.tablesDB && appwriteConfig.projectId !== "PASTE_APPWRITE_PROJECT_ID_HERE");
+    return Boolean(window.__kchatAppwrite?.client && window.__kchatAppwrite?.db && appwriteConfig.projectId !== "PASTE_APPWRITE_PROJECT_ID_HERE");
   },
   subscribe(groupId, groupName, callback) {
     if (!this.isConfigured()) return realtimeChat.subscribe(groupId, groupName, callback);
-    const { realtime, tablesDB, Channel, Query } = window.__kchatAppwrite;
+    const { client, db, Query } = window.__kchatAppwrite;
+
     const loadMessages = async () => {
       try {
-        const response = await tablesDB.listRows({ databaseId: appwriteConfig.databaseId, tableId: appwriteConfig.messagesCollectionId, queries: [Query.equal("groupId", String(groupId)), Query.orderAsc("createdAt"), Query.limit(100)] });
-        callback(response.rows.map((row) => ({ id: row.$id, senderId: row.senderId, senderName: row.senderName || "Member", body: row.body || "", createdAt: row.createdAt || Date.now(), status: row.status || "sent", mediaUrl: row.mediaUrl || "", mediaType: row.mediaType || "" })));
-      } catch {
+        const response = await db.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.messagesCollectionId,
+          [Query.equal("groupId", String(groupId)), Query.orderAsc("createdAt"), Query.limit(100)]
+        );
+        callback(response.documents.map((row) => ({ id: row.$id, senderId: row.senderId, senderName: row.senderName || "Member", body: row.body || "", createdAt: row.createdAt || Date.now(), status: row.status || "sent", mediaUrl: row.mediaUrl || "", mediaType: row.mediaType || "" })));
+      } catch (error) {
+        console.error("Failed to load Appwrite messages:", error);
         callback(defaultMessages(groupName));
       }
     };
+
     loadMessages();
-    let subscription;
-    realtime
-      .subscribe(
-        Channel.tablesdb(appwriteConfig.databaseId).table(appwriteConfig.messagesCollectionId).row().create(),
-        (event) => {
-          if (event.payload?.groupId === String(groupId)) loadMessages();
-        },
-        [Query.equal("groupId", [String(groupId)])]
-      )
-      .then((activeSubscription) => {
-        subscription = activeSubscription;
-      })
-      .catch(() => {
-        // Initial listRows still keeps chat usable if websocket setup fails.
-      });
+    const channel = `databases.${appwriteConfig.databaseId}.collections.${appwriteConfig.messagesCollectionId}.documents`;
+    const unsubscribe = client.subscribe(channel, (event) => {
+      if (event.payload?.groupId === String(groupId)) loadMessages();
+    });
 
     return () => {
-      if (subscription?.unsubscribe) subscription.unsubscribe();
-      else if (subscription?.close) subscription.close();
+      if (typeof unsubscribe === "function") unsubscribe();
     };
   },
   async send(groupId, groupName, message) {
     if (!this.isConfigured()) return realtimeChat.send(groupId, groupName, message);
-    const { tablesDB, ID } = window.__kchatAppwrite;
-    return tablesDB.createRow({ databaseId: appwriteConfig.databaseId, tableId: appwriteConfig.messagesCollectionId, rowId: ID.unique(), data: { groupId: String(groupId), senderId: message.senderId, senderName: message.senderName, body: message.body, status: message.status || "sent", mediaUrl: message.mediaUrl || "", mediaType: message.mediaType || "", createdAt: Date.now() } });
+    const { db, ID } = window.__kchatAppwrite;
+    return db.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.messagesCollectionId,
+      ID.unique(),
+      { groupId: String(groupId), senderId: message.senderId, senderName: message.senderName, body: message.body, status: message.status || "sent", mediaUrl: message.mediaUrl || "", mediaType: message.mediaType || "", createdAt: Date.now() }
+    );
   },
   async uploadMedia(groupId, file, onProgress = () => {}) {
     const error = validateMediaFile(file);
@@ -379,6 +379,87 @@ const appwriteRealtimeChat = {
     const finalUrl = `${appwriteConfig.endpoint}/storage/buckets/${appwriteConfig.bucketId}/files/${uploaded.$id}/view?project=${appwriteConfig.projectId}`;
     onProgress(100);
     return { url: finalUrl, thumbnailUrl: finalUrl, file: preparedFile, local: false, fileId: uploaded.$id };
+  },
+};
+
+function mapAppwriteAd(row) {
+  return {
+    id: row.$id,
+    type: row.type || "image",
+    business: row.business || "Local Business",
+    title: row.title || "Untitled ad",
+    subtitle: row.subtitle || "",
+    cta: row.type === "video" ? "Watch Ad" : "View Offer",
+    status: row.status || "pending",
+    price: row.price || "Sponsored",
+    location: row.location || "Imphal",
+    mediaUrl: row.mediaUrl || "",
+    likes: row.likes || 0,
+    comments: row.comments || 0,
+    category: row.category || "Food",
+    submittedBy: row.ownerId || "",
+    ownerId: row.ownerId || "",
+    ownerName: row.ownerName || "",
+    createdAt: row.createdAt || Date.now(),
+  };
+}
+
+const appwriteAds = {
+  isConfigured() {
+    return Boolean(window.__kchatAppwrite?.db && appwriteConfig.adsCollectionId);
+  },
+  async loadAll() {
+    if (!this.isConfigured()) return [];
+    const { db, Query } = window.__kchatAppwrite;
+    const response = await db.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.adsCollectionId,
+      [Query.orderDesc("createdAt"), Query.limit(100)]
+    );
+    return response.documents.map(mapAppwriteAd);
+  },
+  async createPending(ad) {
+    if (!this.isConfigured()) return ad;
+    const { db, ID } = window.__kchatAppwrite;
+    const row = await db.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.adsCollectionId,
+      ID.unique(),
+      {
+        title: ad.title || "Untitled ad",
+        subtitle: ad.subtitle || "",
+        business: ad.business || "Local Business",
+        category: ad.category || "Food",
+        status: "pending",
+        type: ad.type || "image",
+        price: ad.price || "Sponsored",
+        location: ad.location || "Imphal",
+        mediaUrl: ad.mediaUrl || "",
+        ownerId: currentUser.uid,
+        ownerName: currentUser.name,
+        createdAt: Date.now(),
+        likes: 0,
+        comments: 0,
+      }
+    );
+    return mapAppwriteAd(row);
+  },
+  async setStatus(ad, status) {
+    if (!this.isConfigured()) return { ...ad, status };
+    const { db } = window.__kchatAppwrite;
+    const row = await db.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.adsCollectionId,
+      ad.id,
+      { status }
+    );
+    return mapAppwriteAd(row);
+  },
+  subscribe(callback) {
+    if (!this.isConfigured()) return () => {};
+    const { client } = window.__kchatAppwrite;
+    const channel = `databases.${appwriteConfig.databaseId}.collections.${appwriteConfig.adsCollectionId}.documents`;
+    return client.subscribe(channel, callback);
   },
 };
 
@@ -431,18 +512,62 @@ function GlassCard({ children, className = "" }) {
 
 function TopBar({ setActive, openMenu, back, title, showUserIcon }) {
   return (
-    <header className="fixed left-1/2 top-0 z-50 flex h-[calc(env(safe-area-inset-top)+64px)] w-full max-w-[430px] -translate-x-1/2 items-end justify-between border-b border-[#f0dfd5]/70 bg-[#fff8f5]/85 px-4 pb-3 backdrop-blur-xl shadow-sm">
-      <div className="flex items-center gap-3">
-        {back ? <button onClick={back} className="grid h-10 w-10 place-items-center rounded-full transition active:scale-95"><ArrowLeft className="h-5 w-5" /></button> : <KChatLogoMark size={48} />}
-        <div>
-          <span className="block text-lg font-black tracking-tight text-[#221a13]">{title || "Kanglei Chat"}</span>
-          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#8f4e00]">Connect • Share • Belong</span>
+    <header className="fixed left-1/2 top-0 z-50 w-full max-w-[430px] -translate-x-1/2 border-b border-[#f0dfd5]/70 bg-[#fff8f5]/92 backdrop-blur-xl shadow-sm">
+      <div className="flex h-[calc(env(safe-area-inset-top)+64px)] items-end justify-between gap-2 px-4 pb-3 pt-[env(safe-area-inset-top)]">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+          {back ? (
+            <button
+              onClick={back}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition active:scale-95"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          ) : (
+            <div className="grid h-11 w-11 shrink-0 place-items-center">
+              <KChatLogoMark size={44} />
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1 leading-none">
+            <span className="block truncate text-[17px] font-black leading-tight tracking-tight text-[#221a13]">
+              {title || "Kanglei Chat"}
+            </span>
+            <span className="mt-0.5 block truncate text-[10px] font-bold uppercase leading-tight tracking-[0.14em] text-[#8f4e00]">
+              Connect • Share • Belong
+            </span>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-1">
-        <button onClick={() => setActive("search")} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="Search"><Search className="h-5 w-5" /></button>
-        {showUserIcon ? <button onClick={() => setActive("profile")} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="User profile"><User className="h-5 w-5" /></button> : null}
-        {!back ? <button onClick={openMenu} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="Menu"><Menu className="h-5 w-5" /></button> : null}
+
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => setActive("search")}
+            className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95"
+            aria-label="Search"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+
+          {showUserIcon ? (
+            <button
+              onClick={() => setActive("profile")}
+              className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95"
+              aria-label="User profile"
+            >
+              <User className="h-5 w-5" />
+            </button>
+          ) : null}
+
+          {!back ? (
+            <button
+              onClick={openMenu}
+              className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95"
+              aria-label="Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          ) : null}
+        </div>
       </div>
     </header>
   );
@@ -652,11 +777,12 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
         uploadedUrl = result.url;
         uploadedType = result.file.type.startsWith("video/") ? "video" : "image";
       }
-      const newAd = { id: Date.now(), type: uploadedType, business: business.trim(), title: description.slice(0, 42), subtitle: description, cta: uploadedType === "video" ? "Watch Ad" : "View Offer", mediaUrl: uploadedUrl, category, status: "pending", price: "Sponsored", location: "Imphal", likes: 0, comments: 0, submittedBy: currentUser.uid };
-      const updated = [newAd, ...pendingAds];
+      const draftAd = { id: String(Date.now()), type: uploadedType, business: business.trim(), title: description.slice(0, 42), subtitle: description, cta: uploadedType === "video" ? "Watch Ad" : "View Offer", mediaUrl: uploadedUrl, category, status: "pending", price: "Sponsored", location: "Imphal", likes: 0, comments: 0, submittedBy: currentUser.uid, ownerId: currentUser.uid, ownerName: currentUser.name, createdAt: Date.now() };
+      const savedAd = await appwriteAds.createPending(draftAd);
+      const updated = [savedAd, ...pendingAds.filter((item) => item.id !== savedAd.id)];
       setPendingAds(updated);
       storage.set("kchat_pending_ads", updated);
-      showToast("Ad submitted. Waiting for admin approval.");
+      showToast("Ad submitted to Appwrite. Waiting for admin approval.");
       setActive("feed");
     } catch (error) {
       showToast(error.message || "Upload failed. Try smaller media.");
@@ -669,27 +795,46 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
 }
 
 function AdminPanelScreen({ setActive, showToast, headerProps, ads, setAds, pendingAds, setPendingAds }) {
-  const approveAd = (ad) => {
-    const approved = { ...ad, status: "approved" };
-    const nextPending = pendingAds.filter((item) => item.id !== ad.id);
-    const nextAds = [approved, ...ads];
-    setPendingAds(nextPending);
-    setAds(nextAds);
-    storage.set("kchat_pending_ads", nextPending);
-    storage.set("kchat_ads", nextAds);
-    showToast("Ad approved and published on dashboard.");
+  const approveAd = async (ad) => {
+    try {
+      const approved = await appwriteAds.setStatus(ad, "approved");
+      const nextPending = pendingAds.filter((item) => item.id !== ad.id);
+      const nextAds = [approved, ...ads.filter((item) => item.id !== approved.id)];
+      setPendingAds(nextPending);
+      setAds(nextAds);
+      storage.set("kchat_pending_ads", nextPending);
+      storage.set("kchat_ads", nextAds);
+      showToast("Ad approved and published on dashboard.");
+    } catch (error) {
+      console.error("Approve ad failed:", error);
+      showToast("Approve failed. Enable Any → Update permission on ads table.");
+    }
   };
-  const rejectAd = (id) => {
-    const nextPending = pendingAds.filter((item) => item.id !== id);
-    setPendingAds(nextPending);
-    storage.set("kchat_pending_ads", nextPending);
-    showToast("Ad rejected.");
+  const rejectAd = async (id) => {
+    try {
+      const ad = pendingAds.find((item) => item.id === id);
+      if (ad) await appwriteAds.setStatus(ad, "rejected");
+      const nextPending = pendingAds.filter((item) => item.id !== id);
+      setPendingAds(nextPending);
+      storage.set("kchat_pending_ads", nextPending);
+      showToast("Ad rejected.");
+    } catch (error) {
+      console.error("Reject ad failed:", error);
+      showToast("Reject failed. Enable Any → Update permission on ads table.");
+    }
   };
-  const deleteAd = (id) => {
-    const nextAds = ads.filter((item) => item.id !== id);
-    setAds(nextAds);
-    storage.set("kchat_ads", nextAds);
-    showToast("Published ad removed.");
+  const deleteAd = async (id) => {
+    try {
+      const ad = ads.find((item) => item.id === id);
+      if (ad) await appwriteAds.setStatus(ad, "deleted");
+      const nextAds = ads.filter((item) => item.id !== id);
+      setAds(nextAds);
+      storage.set("kchat_ads", nextAds);
+      showToast("Published ad removed.");
+    } catch (error) {
+      console.error("Delete ad failed:", error);
+      showToast("Delete failed. Enable Any → Update permission on ads table.");
+    }
   };
   return (
     <>
@@ -1405,7 +1550,7 @@ export default function KangleiChatMobileMVP() {
   const [selectedAd, setSelectedAd] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ads, setAds] = useState(() => storage.get("kchat_ads", DEFAULT_ADS));
-  const [pendingAds, setPendingAds] = useState(() => storage.get("kchat_pending_ads", DEFAULT_PENDING_ADS));
+  const [pendingAds, setPendingAds] = useState(() => storage.get("kchat_pending_ads", []));
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const screenRef = useRef(active);
   const lastBackPressRef = useRef(0);
@@ -1430,6 +1575,30 @@ export default function KangleiChatMobileMVP() {
     window.addEventListener("offline", onOffline);
     return () => { window.removeEventListener("online", onOnline); window.removeEventListener("offline", onOffline); };
   }, []);
+  useEffect(() => {
+    const loadCloudAds = async () => {
+      try {
+        const cloudAds = await appwriteAds.loadAll();
+        if (!cloudAds.length) return;
+        const nextAds = cloudAds.filter((ad) => ad.status === "approved");
+        const nextPending = cloudAds.filter((ad) => ad.status === "pending");
+        setAds(nextAds.length ? nextAds : DEFAULT_ADS);
+        setPendingAds(nextPending);
+        storage.set("kchat_ads", nextAds.length ? nextAds : DEFAULT_ADS);
+        storage.set("kchat_pending_ads", nextPending);
+      } catch (error) {
+        console.error("Failed to load Appwrite ads:", error);
+        showToast("Could not load cloud ads. Check ads table permissions.");
+      }
+    };
+
+    loadCloudAds();
+    const unsubscribe = appwriteAds.subscribe(() => loadCloudAds());
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     const safePushFeedState = () => {
       try {
