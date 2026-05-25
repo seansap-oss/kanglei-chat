@@ -82,6 +82,109 @@ const DEFAULT_GROUPS = [
 ];
 
 const CATEGORIES = ["Food", "Arts", "Tech", "Events"];
+const MARKETPLACE_CATEGORIES = [
+  {
+    id: "all",
+    name: "All",
+    subcategories: ["All Subcategories"],
+  },
+  {
+    id: "motors",
+    name: "Motors & Vehicles",
+    subcategories: [
+      "Cars",
+      "Motorcycles & Scooters",
+      "Commercial Vehicles",
+      "Auto Parts & Accessories",
+      "Boats & Marine",
+      "Vehicle Rentals",
+      "Caravans & Trailers",
+    ],
+  },
+  {
+    id: "property",
+    name: "Property & Real Estate",
+    subcategories: [
+      "Residential for Sale",
+      "Residential for Rent",
+      "Commercial Property",
+      "Land & Plots",
+      "PG & Shared Rooms",
+      "Parking & Garages",
+    ],
+  },
+  {
+    id: "general",
+    name: "For Sale",
+    subcategories: [
+      "Home & Garden",
+      "Electronics & Tech",
+      "Phones & Tablets",
+      "Furniture",
+      "Fashion & Beauty",
+      "Baby & Kids",
+      "Sports, Leisure & Travel",
+      "Collectibles & Art",
+      "Books & Music",
+      "Freebies",
+      "Stuff Wanted",
+    ],
+  },
+  {
+    id: "jobs",
+    name: "Jobs & Recruitment",
+    subcategories: [
+      "Full-Time & Part-Time",
+      "Skilled Trades",
+      "Freelance / Gig Work",
+      "Remote Work",
+      "Hospitality & Retail",
+      "Office & Admin",
+      "Drivers & Delivery",
+    ],
+  },
+  {
+    id: "services",
+    name: "Services",
+    subcategories: [
+      "Home Improvement",
+      "Repairs & Maintenance",
+      "Business Support",
+      "Health & Wellness",
+      "Beauty Services",
+      "Lessons & Tutoring",
+      "Events & Photography",
+      "Transport Services",
+    ],
+  },
+  {
+    id: "pets",
+    name: "Pets & Livestock",
+    subcategories: [
+      "Dogs & Puppies",
+      "Cats & Kittens",
+      "Birds",
+      "Reptiles & Fish",
+      "Livestock",
+      "Pet Accessories",
+      "Pet Services",
+    ],
+  },
+  {
+    id: "community",
+    name: "Community",
+    subcategories: [
+      "Events & Gigs",
+      "Classes & Groups",
+      "Lost & Found",
+      "Rideshare",
+      "Volunteers",
+      "Sports Partners",
+      "Local Announcements",
+    ],
+  },
+];
+
 const INTERESTS = ["Local News", "Food", "Music", "Jobs", "Community", "Buy/Sell", "Events", "Study"];
 const DEFAULT_ADS = [
   { id: 1, type: "image", business: "Kanglei Cafe", title: "Grand opening offer", subtitle: "20% off coffee and snacks this weekend near Thangal Bazaar.", cta: "View Offer", status: "approved", price: "Sponsored", location: "Imphal", likes: 8, comments: 3 },
@@ -138,6 +241,54 @@ function getSavedUser() {
 }
 
 const currentUser = getSavedUser();
+
+function getUserByUid(uid) {
+  return TEST_USERS.find((user) => user.uid === uid) || null;
+}
+
+function getUserInitials(name = "User") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "U";
+}
+
+function makePrivateChatGroup(otherUser) {
+  const ids = [currentUser.uid, otherUser.uid].sort();
+  return {
+    id: `private_${ids.join("_")}`,
+    name: otherUser.name,
+    area: "Direct chat",
+    members: "2",
+    tag: "Private",
+    unread: 0,
+    health: 100,
+    icon: User,
+    color: "beige",
+    membersList: ids,
+    isPrivate: true,
+    isDirectChat: true,
+    directUser: otherUser,
+    createdBy: currentUser.uid,
+    admins: ids,
+  };
+}
+
+function UserAvatar({ user, size = 36 }) {
+  const initials = getUserInitials(user?.name || "User");
+  return (
+    <div
+      className="grid shrink-0 place-items-center rounded-full bg-[#fff1e8] text-xs font-black text-[#8f4e00] shadow-sm"
+      style={{ width: size, height: size }}
+    >
+      {initials}
+    </div>
+  );
+}
+
 
 const storage = {
   get(key, fallback) { 
@@ -512,62 +663,18 @@ function GlassCard({ children, className = "" }) {
 
 function TopBar({ setActive, openMenu, back, title, showUserIcon }) {
   return (
-    <header className="fixed left-1/2 top-0 z-50 w-full max-w-[430px] -translate-x-1/2 border-b border-[#f0dfd5]/70 bg-[#fff8f5]/92 backdrop-blur-xl shadow-sm">
-      <div className="flex h-[calc(env(safe-area-inset-top)+64px)] items-end justify-between gap-2 px-4 pb-3 pt-[env(safe-area-inset-top)]">
-        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-          {back ? (
-            <button
-              onClick={back}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition active:scale-95"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          ) : (
-            <div className="grid h-11 w-11 shrink-0 place-items-center">
-              <KChatLogoMark size={44} />
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1 leading-none">
-            <span className="block truncate text-[17px] font-black leading-tight tracking-tight text-[#221a13]">
-              {title || "Kanglei Chat"}
-            </span>
-            <span className="mt-0.5 block truncate text-[10px] font-bold uppercase leading-tight tracking-[0.14em] text-[#8f4e00]">
-              Connect • Share • Belong
-            </span>
-          </div>
+    <header className="fixed left-1/2 top-0 z-50 flex h-[calc(env(safe-area-inset-top)+64px)] w-full max-w-[430px] -translate-x-1/2 items-end justify-between border-b border-[#f0dfd5]/70 bg-[#fff8f5]/85 px-4 pb-3 backdrop-blur-xl shadow-sm">
+      <div className="flex items-center gap-3">
+        {back ? <button onClick={back} className="grid h-10 w-10 place-items-center rounded-full transition active:scale-95"><ArrowLeft className="h-5 w-5" /></button> : <KChatLogoMark size={48} />}
+        <div>
+          <span className="block text-lg font-black tracking-tight text-[#221a13]">{title || "Kanglei Chat"}</span>
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#8f4e00]">Connect • Share • Belong</span>
         </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            onClick={() => setActive("search")}
-            className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95"
-            aria-label="Search"
-          >
-            <Search className="h-5 w-5" />
-          </button>
-
-          {showUserIcon ? (
-            <button
-              onClick={() => setActive("profile")}
-              className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95"
-              aria-label="User profile"
-            >
-              <User className="h-5 w-5" />
-            </button>
-          ) : null}
-
-          {!back ? (
-            <button
-              onClick={openMenu}
-              className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95"
-              aria-label="Menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          ) : null}
-        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <button onClick={() => setActive("search")} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="Search"><Search className="h-5 w-5" /></button>
+        {showUserIcon ? <button onClick={() => setActive("profile")} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="User profile"><User className="h-5 w-5" /></button> : null}
+        {!back ? <button onClick={openMenu} className="grid h-10 w-10 place-items-center rounded-full text-[#221a13] transition hover:bg-[#f0dfd5]/50 active:scale-95" aria-label="Menu"><Menu className="h-5 w-5" /></button> : null}
       </div>
     </header>
   );
@@ -575,8 +682,9 @@ function TopBar({ setActive, openMenu, back, title, showUserIcon }) {
 
 function BottomNav({ active, setActive }) {
   const items = [
-    { id: "feed", label: "Chat", Icon: MessageCircle },
-    { id: "explore", label: "Explore", Icon: Compass },
+    { id: "dashboard", label: "Home", Icon: Compass },
+    { id: "feed", label: "Chats", Icon: MessageCircle },
+    { id: "explore", label: "Explore", Icon: Search },
     { id: "sponsorForm", label: "Post", Icon: PlusCircle },
     { id: "profile", label: "Profile", Icon: User },
   ];
@@ -639,15 +747,43 @@ function ActionDrawer({ open, onClose, setActive, resetApp }) {
   return <div className="fixed inset-0 z-[70] bg-black/25 backdrop-blur-sm" onClick={onClose}><div className="absolute bottom-0 left-1/2 w-full max-w-[430px] -translate-x-1/2 rounded-t-[36px] bg-[#fff8f5] p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-black">Menu</h2><p className="text-xs font-bold text-[#544437]">Quick actions</p></div><button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-2xl bg-[#fff1e8]"><X className="h-5 w-5" /></button></div><div className="space-y-2">{items.map((item) => <button key={item.title} onClick={() => { setActive(item.target); onClose(); }} className="flex w-full items-center justify-between rounded-[24px] bg-white/80 p-4 text-left transition active:scale-95"><div><div className="font-black">{item.title}</div><div className="text-xs font-semibold text-[#544437]">{item.sub}</div></div><ChevronRight className="h-5 w-5 text-[#8f4e00]" /></button>)}<button onClick={resetApp} className="mt-3 w-full rounded-[24px] bg-[#221a13] p-4 text-left font-black text-white transition active:scale-95">Logout / reset app</button></div></div></div>;
 }
 
-function MiniBrandBanner() {
+function MiniBrandBanner({ setActive, showToast }) {
+  const onlineCount = TEST_USERS.length;
+  const [onlineClicked, setOnlineClicked] = useState(false);
+
+  const handleOnlineClick = () => {
+    if (!onlineClicked) {
+      setOnlineClicked(true);
+      showToast("Only premium users can  view who's online and profile, Click one more to buy the  premium account");
+      return;
+    }
+
+    setActive("premium");
+  };
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-r from-[#fff1e8] to-[#f8d8ff]/35 px-5 py-4">
-      <div className="flex items-center gap-4">
-        <div className="rounded-[1.5rem] bg-white/70 p-2 shadow-lg"><KChatLogoMark size={58} /></div>
-        <div className="flex-1">
-          <h1 className="text-3xl font-black leading-none tracking-[-0.04em] text-[#8f4e00]">Kanglei Chat</h1>
-          <p className="mt-1 text-xs font-semibold text-[#544437]">Premium local connections & community discovery</p>
+    <section className="rounded-[26px] bg-white/80 px-5 py-4 shadow-[0_8px_24px_rgba(34,26,19,0.05)] backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8f4e00]">Signed in as</p>
+          <h1 className="mt-1 truncate text-xl font-black tracking-[-0.03em] text-[#221a13]">
+            {currentUser.name} · {currentUser.phone || currentUser.uid}
+          </h1>
         </div>
+
+        <button
+          onClick={handleOnlineClick}
+          className="group relative shrink-0 overflow-visible rounded-[20px] bg-[#e9fff9] px-4 py-3 text-center shadow-sm transition duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-[0_10px_28px_rgba(0,107,94,0.22)] active:scale-95"
+          aria-label="View online users"
+        >
+          <span className="absolute inset-0 rounded-[20px] animate-pulse bg-[#77f4de]/25" />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#00a36c] shadow-[0_0_0_6px_rgba(0,163,108,0.12)]" />
+          <span className="pointer-events-none absolute bottom-[calc(100%+10px)] right-0 z-50 w-[190px] rounded-[16px] bg-[#221a13] px-3 py-2 text-center text-[11px] font-black leading-4 text-white opacity-0 shadow-2xl transition duration-200 group-hover:translate-y-[-2px] group-hover:opacity-100">
+            Click to view who's online
+          </span>
+          <div className="relative text-2xl font-black leading-none text-[#006b5e] transition duration-300 group-hover:scale-110">{onlineCount}</div>
+          <div className="relative mt-1 text-[10px] font-black uppercase tracking-wider text-[#006b5e]">Online</div>
+        </button>
       </div>
     </section>
   );
@@ -681,9 +817,9 @@ function SpotlightCard({ ads = [], showToast, setActive, openAd }) {
           <h2 className="text-lg font-black">Local Spotlight</h2>
           <button onClick={() => setActive("allAds")} className="text-xs font-black text-[#8f4e00]">See all</button>
         </div>
-        <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
-          {cards.map((ad) => (
-            <button key={ad.id} onClick={() => openAd(ad)} className="min-w-[190px] overflow-hidden rounded-[18px] bg-white text-left shadow-sm transition active:scale-95">
+        <div className="grid grid-cols-2 gap-3">
+          {cards.slice(0, 4).map((ad) => (
+            <button key={ad.id} onClick={() => openAd(ad)} className="w-full overflow-hidden rounded-[18px] bg-white text-left shadow-sm transition active:scale-95">
               <div className="relative h-28 bg-gradient-to-br from-[#ffdcc2] to-[#f8d8ff]">
                 {ad.mediaUrl ? (ad.type === "video" ? <video src={ad.mediaUrl} className="h-full w-full object-cover" /> : <img src={ad.mediaUrl} alt={ad.title} className="h-full w-full object-cover" />) : <div className="grid h-full place-items-center"><KChatLogoMark size={54} /></div>}
                 <span className="absolute bottom-2 left-2 rounded-lg bg-black/70 px-2 py-1 text-xs font-black text-white">{ad.price || "Sponsored"}</span>
@@ -702,26 +838,54 @@ function SpotlightCard({ ads = [], showToast, setActive, openAd }) {
 }
 
 function CommunityCard({ group, openGroup, toggleGroupMembership }) {
-  const Icon = group.icon;
-  const colorClass = group.color === "mint" ? "bg-[#77f4de] text-[#006f62]" : group.color === "purple" ? "bg-[#e29afd] text-[#692984]" : group.color === "beige" ? "bg-[#f0dfd5] text-[#544437]" : "bg-[#ff9f43] text-[#2e1500]";
+  const Icon = typeof group.icon === "function" ? group.icon : Users;
+
+  const colorClass =
+    group.color === "mint"
+      ? "bg-[#77f4de] text-[#006f62]"
+      : group.color === "purple"
+        ? "bg-[#e29afd] text-[#692984]"
+        : group.color === "beige"
+          ? "bg-[#f0dfd5] text-[#544437]"
+          : "bg-[#ff9f43] text-[#2e1500]";
+
   const isJoined = group.membersList?.includes(currentUser.uid);
   const isAdmin = currentUser.role === "admin" || group.admins?.includes(currentUser.uid);
   const unreadCount = storage.get(unreadKey(group.id), group.unread || 0);
 
   return (
-    <button onClick={() => openGroup(group)} className="relative rounded-[2rem] bg-white/70 p-5 text-center shadow-[0_8px_24px_rgba(34,26,19,0.05)] backdrop-blur-xl transition active:scale-95">
-      {unreadCount > 0 ? <span className="absolute left-3 top-3 grid h-6 min-w-[24px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">{unreadCount}</span> : null}
-      {isAdmin ? <span className="absolute right-3 top-3 rounded-full bg-[#ffeddc] px-2 py-1 text-[10px] font-black text-[#8f4e00]">ADMIN</span> : null}
-      <div className={`mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl ${colorClass}`}><Icon className="h-7 w-7" /></div>
+    <button
+      onClick={() => openGroup(group)}
+      className="relative rounded-[2rem] bg-white/70 p-5 text-center shadow-[0_8px_24px_rgba(34,26,19,0.05)] backdrop-blur-xl transition active:scale-95"
+    >
+      {unreadCount > 0 ? (
+        <span className="absolute left-3 top-3 grid h-6 min-w-[24px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+          {unreadCount}
+        </span>
+      ) : null}
+
+      {isAdmin ? (
+        <span className="absolute right-3 top-3 rounded-full bg-[#ffeddc] px-2 py-1 text-[10px] font-black text-[#8f4e00]">
+          ADMIN
+        </span>
+      ) : null}
+
+      <div className={`mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl ${colorClass}`}>
+        <Icon className="h-7 w-7" />
+      </div>
+
       <h4 className="font-semibold text-[#221a13]">{group.name}</h4>
       <p className="mt-1 text-xs text-[#544437]">{group.members} members</p>
+
       {toggleGroupMembership ? (
         <span
           onClick={(event) => {
             event.stopPropagation();
             toggleGroupMembership(group.id);
           }}
-          className={`mt-3 inline-flex rounded-full px-4 py-2 text-[11px] font-black ${isJoined ? "bg-[#fff1e8] text-[#8f4e00]" : "bg-[#221a13] text-white"}`}
+          className={`mt-3 inline-flex rounded-full px-4 py-2 text-[11px] font-black ${
+            isJoined ? "bg-[#fff1e8] text-[#8f4e00]" : "bg-[#221a13] text-white"
+          }`}
         >
           {isJoined ? "Joined" : "Join"}
         </span>
@@ -730,8 +894,188 @@ function CommunityCard({ group, openGroup, toggleGroupMembership }) {
   );
 }
 
-function FeedScreen({ setActive, openGroup, openAd, showToast, headerProps, ads, toggleGroupMembership }) {
-  return <><TopBar {...headerProps} /><main className="pb-36 pt-[calc(env(safe-area-inset-top)+64px)]"><SpotlightCard ads={ads} showToast={showToast} setActive={setActive} openAd={openAd} /><section className="mt-6 px-4"><div className="mb-5 flex items-end justify-between"><div><h3 className="text-xl font-bold tracking-[-0.03em] text-[#221a13]">Explore Communities</h3><p className="mt-1 text-sm text-[#544437]">Find your tribe among our curated circles.</p></div><div className="flex gap-2"><button onClick={() => setActive("createGroup")} className="rounded-full bg-[#ff9f43] px-3 py-2 text-xs font-black text-[#2e1500] transition active:scale-95">+ Group</button><button onClick={() => setActive("search")} className="rounded-full bg-[#fff1e8] px-3 py-2 text-xs font-bold text-[#8f4e00] transition active:scale-95">View All</button></div></div><div className="grid grid-cols-3 gap-3">{BASE_GROUPS.slice(0, 6).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}</div></section><CaptainPrivilege showToast={showToast} /></main></>;
+function getChatPreview(chatId, fallback = "Tap to open chat") {
+  const messages = storage.get(chatKey(chatId), []);
+  const last = Array.isArray(messages) && messages.length ? messages[messages.length - 1] : null;
+  if (!last) return fallback;
+  if (last.mediaType === "image") return "Shared an image";
+  if (last.mediaType === "video") return "Shared a video";
+  return last.body || fallback;
+}
+
+function getChatTime(chatId) {
+  const messages = storage.get(chatKey(chatId), []);
+  const last = Array.isArray(messages) && messages.length ? messages[messages.length - 1] : null;
+  if (!last?.createdAt) return "";
+  try {
+    return new Date(last.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function ChatHistoryCard({ title, subtitle, time, unread = 0, type = "group", user, onOpen }) {
+  return (
+    <button onClick={onOpen} className="w-full text-left transition active:scale-[0.99]">
+      <GlassCard className="p-4">
+        <div className="flex items-center gap-3">
+          {user ? (
+            <UserAvatar user={user} size={46} />
+          ) : (
+            <div className="grid h-[46px] w-[46px] shrink-0 place-items-center rounded-2xl bg-[#fff1e8] text-[#8f4e00]">
+              <Users className="h-6 w-6" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="truncate font-black text-[#221a13]">{title}</h3>
+              {time ? <span className="shrink-0 text-[11px] font-bold text-[#877365]">{time}</span> : null}
+            </div>
+            <p className="mt-1 truncate text-xs font-semibold text-[#544437]">{subtitle}</p>
+            <span className="mt-2 inline-flex rounded-full bg-[#fff1e8] px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[#8f4e00]">
+              {type === "direct" ? "Direct" : "Group"}
+            </span>
+          </div>
+          {unread > 0 ? (
+            <span className="grid h-6 min-w-[24px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+              {unread}
+            </span>
+          ) : null}
+        </div>
+      </GlassCard>
+    </button>
+  );
+}
+
+function DashboardScreen({ setActive, openGroup, openAd, showToast, headerProps, ads, toggleGroupMembership }) {
+  const groups = normalizeGroups(storage.get(GROUPS_KEY, BASE_GROUPS));
+
+  return (
+    <>
+      <TopBar {...headerProps} title="Kanglei Chat" />
+      <main className="space-y-6 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <MiniBrandBanner setActive={setActive} showToast={showToast} />
+
+        <SpotlightCard ads={ads} showToast={showToast} setActive={setActive} openAd={openAd} />
+
+        <section>
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <h2 className="text-xl font-black tracking-[-0.03em] text-[#221a13]">Explore Communities</h2>
+              <p className="mt-1 text-sm font-semibold text-[#544437]">Dashboard home for groups, spotlight ads and local updates.</p>
+            </div>
+            <button onClick={() => setActive("search")} className="rounded-full bg-[#fff1e8] px-3 py-2 text-xs font-black text-[#8f4e00] transition active:scale-95">
+              All Groups
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {groups.slice(0, 6).map((group) => (
+              <CommunityCard
+                key={group.id}
+                group={group}
+                openGroup={openGroup}
+                toggleGroupMembership={toggleGroupMembership}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xl font-black">Local Discovery</h2>
+            <button onClick={() => setActive("explore")} className="text-xs font-black text-[#8f4e00]">View all</button>
+          </div>
+          <div className="space-y-3">
+            {LOCAL_DISCOVERY.slice(0, 3).map((item) => (
+              <DiscoveryCard key={item.id} item={item} showToast={showToast} />
+            ))}
+          </div>
+        </section>
+
+        <CaptainPrivilege showToast={showToast} />
+      </main>
+    </>
+  );
+}
+
+function FeedScreen({ setActive, openGroup, openAd, showToast, headerProps, ads, toggleGroupMembership, openPrivateChat }) {
+  const [chatFilter, setChatFilter] = useState("all");
+  const groups = normalizeGroups(storage.get(GROUPS_KEY, BASE_GROUPS));
+  const directUsers = TEST_USERS.filter((user) => user.uid !== currentUser.uid);
+  const visibleGroups = chatFilter === "direct" ? [] : groups;
+  const visibleDirectUsers = chatFilter === "groups" ? [] : directUsers;
+
+  return (
+    <>
+      <TopBar {...headerProps} title="Chats" />
+      <main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <GlassCard className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-black tracking-[-0.04em] text-[#221a13]">Chat history</h1>
+              <p className="mt-1 text-xs font-bold text-[#544437]">Direct messages, group chats and all active conversations.</p>
+            </div>
+            {currentUser.role === "admin" ? (
+              <button onClick={() => setActive("createGroup")} className="shrink-0 rounded-full bg-[#ff9f43] px-4 py-3 text-xs font-black text-[#2e1500] transition active:scale-95">
+                + Group
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-[24px] bg-white p-1 shadow-sm">
+            {[{ id: "all", label: "All" }, { id: "direct", label: "Direct" }, { id: "groups", label: "Groups" }].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setChatFilter(item.id)}
+                className={`rounded-[20px] px-3 py-2 text-xs font-black transition active:scale-95 ${chatFilter === item.id ? "bg-[#ffeddc] text-[#8f4e00]" : "text-[#544437]"}`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </GlassCard>
+
+        <section className="space-y-3">
+          {visibleDirectUsers.map((user) => {
+            const privateGroup = makePrivateChatGroup(user);
+            return (
+              <ChatHistoryCard
+                key={privateGroup.id}
+                type="direct"
+                user={user}
+                title={user.name}
+                subtitle={getChatPreview(privateGroup.id, `Private chat with ${user.name}`)}
+                time={getChatTime(privateGroup.id)}
+                unread={storage.get(unreadKey(privateGroup.id), 0)}
+                onOpen={() => openPrivateChat(user)}
+              />
+            );
+          })}
+
+          {visibleGroups.map((group) => (
+            <ChatHistoryCard
+              key={group.id}
+              type="group"
+              title={group.name}
+              subtitle={getChatPreview(group.id, `${group.area || "Local"} · ${group.members || "0"} members`)}
+              time={getChatTime(group.id)}
+              unread={storage.get(unreadKey(group.id), group.unread || 0)}
+              onOpen={() => openGroup(group)}
+            />
+          ))}
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-black">Local Spotlight</h2>
+            <button onClick={() => setActive("allAds")} className="text-xs font-black text-[#8f4e00]">See all</button>
+          </div>
+          <SpotlightCard ads={ads} showToast={showToast} setActive={setActive} openAd={openAd} />
+        </section>
+      </main>
+    </>
+  );
 }
 
 function CaptainPrivilege({ showToast }) {
@@ -739,14 +1083,42 @@ function CaptainPrivilege({ showToast }) {
 }
 
 function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, setPendingAds }) {
-  const [business, setBusiness] = useState("");
+  const postCategories = MARKETPLACE_CATEGORIES.filter((item) => item.id !== "all");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Food");
+  const [selectedCategoryId, setSelectedCategoryId] = useState(postCategories[0]?.id || "motors");
+  const selectedCategoryData = postCategories.find((item) => item.id === selectedCategoryId) || postCategories[0];
+  const [subcategory, setSubcategory] = useState(selectedCategoryData?.subcategories?.[0] || "Cars");
+  const [price, setPrice] = useState("");
+  const [location, setLocation] = useState("Imphal");
   const [media, setMedia] = useState(null);
   const [mediaPreview, setMediaPreview] = useState("");
   const [mediaType, setMediaType] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const postCategoryScrollRef = useRef(null);
+  const postSubcategoryScrollRef = useRef(null);
+
+  const scrollPostCategories = (direction) => {
+    postCategoryScrollRef.current?.scrollBy({
+      left: direction * 260,
+      behavior: "smooth",
+    });
+  };
+
+  const scrollPostSubcategories = (direction) => {
+    postSubcategoryScrollRef.current?.scrollBy({
+      left: direction * 260,
+      behavior: "smooth",
+    });
+  };
+
+  const selectCategory = (categoryId) => {
+    const nextCategory = postCategories.find((item) => item.id === categoryId) || postCategories[0];
+    setSelectedCategoryId(categoryId);
+    setSubcategory(nextCategory?.subcategories?.[0] || "");
+  };
+
   const selectMedia = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -766,8 +1138,21 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
       setUploading(false);
     }
   };
+
   const submit = async () => {
-    if (!business.trim() || !description.trim()) return showToast("Enter business name and ad description.");
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    const cleanPrice = price.trim();
+    const cleanLocation = location.trim();
+    const categoryName = selectedCategoryData?.name || "For Sale";
+    const cleanSubcategory = subcategory || selectedCategoryData?.subcategories?.[0] || "General";
+
+    if (!cleanTitle) return showToast("Enter ad title.");
+    if (!categoryName || !cleanSubcategory) return showToast("Select category and subcategory.");
+    if (!cleanPrice) return showToast("Enter price.");
+    if (!cleanDescription) return showToast("Enter description.");
+    if (!cleanLocation) return showToast("Enter location.");
+
     try {
       setUploading(true);
       let uploadedUrl = mediaPreview;
@@ -777,7 +1162,27 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
         uploadedUrl = result.url;
         uploadedType = result.file.type.startsWith("video/") ? "video" : "image";
       }
-      const draftAd = { id: String(Date.now()), type: uploadedType, business: business.trim(), title: description.slice(0, 42), subtitle: description, cta: uploadedType === "video" ? "Watch Ad" : "View Offer", mediaUrl: uploadedUrl, category, status: "pending", price: "Sponsored", location: "Imphal", likes: 0, comments: 0, submittedBy: currentUser.uid, ownerId: currentUser.uid, ownerName: currentUser.name, createdAt: Date.now() };
+
+      const draftAd = {
+        id: String(Date.now()),
+        type: uploadedType,
+        business: currentUser.name,
+        title: cleanTitle,
+        subtitle: cleanDescription,
+        cta: uploadedType === "video" ? "Watch Ad" : "View Ad",
+        mediaUrl: uploadedUrl,
+        category: `${categoryName} / ${cleanSubcategory}`,
+        status: "pending",
+        price: cleanPrice,
+        location: cleanLocation,
+        likes: 0,
+        comments: 0,
+        submittedBy: currentUser.uid,
+        ownerId: currentUser.uid,
+        ownerName: currentUser.name,
+        createdAt: Date.now(),
+      };
+
       const savedAd = await appwriteAds.createPending(draftAd);
       const updated = [savedAd, ...pendingAds.filter((item) => item.id !== savedAd.id)];
       setPendingAds(updated);
@@ -791,7 +1196,202 @@ function SponsorRequestScreen({ setActive, showToast, headerProps, pendingAds, s
       setUploading(false);
     }
   };
-  return <><TopBar {...headerProps} back={() => setActive("feed")} title="Submit Spotlight Request" /><main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]"><div className="relative h-36 overflow-hidden rounded-[24px] bg-[#8f4e00]"><img src={AD_FORM_IMAGE} alt="Submit ad" className="absolute inset-0 h-full w-full object-cover opacity-75" /><div className="absolute inset-0 bg-gradient-to-r from-[#8f4e00]/80 to-transparent" /><h1 className="absolute bottom-5 left-5 text-lg font-bold text-white">Get your brand discovered.</h1></div><FormCard label="Business Name"><input value={business} onChange={(event) => setBusiness(event.target.value)} className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Enter your official business name" /></FormCard><FormCard label="Ad Description"><textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 250))} className="min-h-28 w-full rounded-[24px] border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none" placeholder="Tell us about your service or event..." /><p className="mt-3 text-xs font-semibold italic text-[#544437]">Maximum 250 characters.</p></FormCard><FormCard label="Target Category"><div className="flex flex-wrap gap-3">{CATEGORIES.map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-5 py-2 text-sm font-semibold transition active:scale-95 ${category === item ? "border-[#8f4e00] bg-[#ffdcc2] text-[#8f4e00]" : "border-[#dac2b1] bg-white text-[#544437]"}`}>{item}</button>)}</div></FormCard><FormCard label="Upload Photo/Video"><label className="grid min-h-44 w-full cursor-pointer place-items-center rounded-[24px] border-2 border-dashed border-[#dac2b1] bg-white text-center transition active:scale-95"><input type="file" accept="image/*,video/*" onChange={selectMedia} className="hidden" />{mediaPreview ? <div className="w-full p-3">{mediaType === "video" ? <video src={mediaPreview} controls className="mx-auto max-h-52 w-full rounded-[20px] object-cover" /> : <img src={mediaPreview} alt="Ad preview" className="mx-auto max-h-52 w-full rounded-[20px] object-cover" />}<p className="mt-3 text-xs font-bold text-[#8f4e00]">{media?.name} · {(media?.size / 1024 / 1024).toFixed(2)}MB</p></div> : <div><div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#f0dfd5]"><ImagePlus className="h-7 w-7 text-[#8f4e00]" /></div><p className="font-semibold">Click to upload image/video</p><p className="mt-1 text-xs text-[#877365]">Images auto-compress · MP4 max 50MB</p></div>}</label></FormCard><p className="flex gap-3 px-2 text-sm text-[#544437]"><Sparkles className="h-5 w-5 shrink-0 text-[#ff9f43]" /> Every member can post up to 5 free ads during the MVP phase. Premium plans will be added later.</p><button onClick={submit} disabled={uploading} className="mb-6 w-full rounded-full bg-[#a45d00] py-4 text-base font-bold text-white shadow-lg transition active:scale-95 disabled:opacity-70">{uploading ? `Uploading ${uploadProgress}%` : "Submit for Approval ➤"}</button></main></>;
+
+  return (
+    <>
+      <TopBar {...headerProps} back={() => setActive("feed")} title="Post Ad" />
+      <main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <GlassCard className="p-5">
+          <h1 className="text-2xl font-black tracking-[-0.04em] text-[#221a13]">Post your ad</h1>
+          <p className="mt-1 text-xs font-bold leading-5 text-[#544437]">
+            Pick the right category and subcategory so buyers can find it quickly in Explore search.
+          </p>
+        </GlassCard>
+
+        <FormCard label="1. Title">
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value.slice(0, 80))}
+            className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none"
+            placeholder="Example: Honda Dio 2020, iPhone 13, room for rent"
+          />
+          <p className="mt-2 text-[11px] font-bold text-[#877365]">Short clear title works best.</p>
+        </FormCard>
+
+        <FormCard label="2. Category & Subcategory">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8f4e00]">Categories</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => scrollPostCategories(-1)}
+                className="grid h-8 w-8 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] shadow-sm transition active:scale-95"
+                aria-label="Scroll post categories left"
+              >
+                ‹
+              </button>
+              <span className="text-[11px] font-bold text-[#877365]">Swipe sideways</span>
+              <button
+                type="button"
+                onClick={() => scrollPostCategories(1)}
+                className="grid h-8 w-8 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] shadow-sm transition active:scale-95"
+                aria-label="Scroll post categories right"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={postCategoryScrollRef}
+            className="no-scrollbar flex w-full touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 pr-8"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {postCategories.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => selectCategory(item.id)}
+                className={`snap-start shrink-0 rounded-full px-6 py-4 text-[15px] font-semibold transition active:scale-95 ${
+                  selectedCategoryId === item.id
+                    ? "bg-[#ff9f43] text-[#2e1500] shadow-md"
+                    : "bg-[#fff1e8] text-[#544437]"
+                }`}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between px-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8f4e00]">Subcategories</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-[#877365]">{selectedCategoryData?.subcategories?.length || 0} options</span>
+              <button
+                type="button"
+                onClick={() => scrollPostSubcategories(-1)}
+                className="grid h-7 w-7 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] shadow-sm transition active:scale-95"
+                aria-label="Scroll post subcategories left"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollPostSubcategories(1)}
+                className="grid h-7 w-7 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] shadow-sm transition active:scale-95"
+                aria-label="Scroll post subcategories right"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={postSubcategoryScrollRef}
+            className="no-scrollbar mt-3 flex w-full touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth rounded-[24px] bg-white/65 p-3 pr-8 shadow-inner"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {(selectedCategoryData?.subcategories || []).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setSubcategory(item)}
+                className={`snap-start shrink-0 rounded-full px-5 py-3 text-sm font-black transition active:scale-95 ${
+                  subcategory === item
+                    ? "bg-[#221a13] text-white shadow-sm"
+                    : "bg-white text-[#8f4e00]"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-[20px] bg-[#fff1e8] px-4 py-3 text-xs font-black text-[#8f4e00]">
+            Selected: {selectedCategoryData?.name} / {subcategory}
+          </div>
+        </FormCard>
+
+        <FormCard label="3. Price">
+          <input
+            value={price}
+            onChange={(event) => setPrice(event.target.value.slice(0, 40))}
+            className="w-full rounded-full border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none"
+            placeholder="Example: ₹45,000"
+            inputMode="text"
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {["Negotiable", "Free", "Exchange", "Contact for price"].map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setPrice(item)}
+                className="rounded-full bg-[#fff1e8] px-4 py-2 text-xs font-black text-[#8f4e00] transition active:scale-95"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </FormCard>
+
+        <FormCard label="4. Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value.slice(0, 500))}
+            className="min-h-28 w-full rounded-[24px] border border-[#dac2b1] bg-white px-5 py-4 text-sm font-semibold outline-none"
+            placeholder="Describe condition, features, documents, pickup, contact timing..."
+          />
+          <p className="mt-3 text-xs font-semibold italic text-[#544437]">Maximum 500 characters.</p>
+        </FormCard>
+
+        <FormCard label="5. Location">
+          <div className="flex items-center gap-3 rounded-full border border-[#dac2b1] bg-white px-5 py-4">
+            <MapPin className="h-5 w-5 text-[#8f4e00]" />
+            <input
+              value={location}
+              onChange={(event) => setLocation(event.target.value.slice(0, 80))}
+              className="w-full bg-transparent text-sm font-semibold outline-none"
+              placeholder="Imphal / Thoubal / Citywide"
+            />
+          </div>
+        </FormCard>
+
+        <FormCard label="6. Ad Photos">
+          <label className="grid min-h-44 w-full cursor-pointer place-items-center rounded-[24px] border-2 border-dashed border-[#dac2b1] bg-white text-center transition active:scale-95">
+            <input type="file" accept="image/*,video/*" onChange={selectMedia} className="hidden" />
+            {mediaPreview ? (
+              <div className="w-full p-3">
+                {mediaType === "video" ? (
+                  <video src={mediaPreview} controls className="mx-auto max-h-52 w-full rounded-[20px] object-cover" />
+                ) : (
+                  <img src={mediaPreview} alt="Ad preview" className="mx-auto max-h-52 w-full rounded-[20px] object-cover" />
+                )}
+                <p className="mt-3 text-xs font-bold text-[#8f4e00]">
+                  {media?.name} · {(media?.size / 1024 / 1024).toFixed(2)}MB
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#f0dfd5]">
+                  <ImagePlus className="h-7 w-7 text-[#8f4e00]" />
+                </div>
+                <p className="font-semibold">Click to upload ad photo/video</p>
+                <p className="mt-1 text-xs text-[#877365]">Images auto-compress · MP4 max 50MB</p>
+              </div>
+            )}
+          </label>
+        </FormCard>
+
+        <button
+          onClick={submit}
+          disabled={uploading}
+          className="mb-6 w-full rounded-full bg-[#a45d00] py-4 text-base font-bold text-white shadow-lg transition active:scale-95 disabled:opacity-70"
+        >
+          {uploading ? `Uploading ${uploadProgress}%` : "Submit for Approval ➤"}
+        </button>
+      </main>
+    </>
+  );
 }
 
 function AdminPanelScreen({ setActive, showToast, headerProps, ads, setAds, pendingAds, setPendingAds }) {
@@ -920,10 +1520,99 @@ function TrendingTopicCard({ topic, showToast }) {
 }
 
 function ExploreScreen({ openGroup, showToast, headerProps, ads = [], toggleGroupMembership }) {
-  const [filter, setFilter] = useState("All");
-  const filters = ["All", "Trending", "Food", "Jobs", "Buy/Sell", "Safety", "Businesses"];
+  const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("All Subcategories");
+  const [appliedCategory, setAppliedCategory] = useState("all");
+  const [appliedSubcategory, setAppliedSubcategory] = useState("All Subcategories");
+  const categoryScrollRef = useRef(null);
+
+  const scrollCategories = (direction) => {
+    const row = categoryScrollRef.current;
+    if (!row) return;
+    row.scrollBy({ left: direction * Math.round(row.clientWidth * 0.78), behavior: "smooth" });
+  };
+
+  const selectedCategoryData = MARKETPLACE_CATEGORIES.find((category) => category.id === selectedCategory) || MARKETPLACE_CATEGORIES[0];
+  const appliedCategoryData = MARKETPLACE_CATEGORIES.find((category) => category.id === appliedCategory) || MARKETPLACE_CATEGORIES[0];
+  const allSubcategories = Array.from(
+    new Set(
+      MARKETPLACE_CATEGORIES
+        .filter((category) => category.id !== "all")
+        .flatMap((category) => category.subcategories)
+    )
+  );
+  const visibleSubcategories = selectedCategory === "all" ? ["All Subcategories", ...allSubcategories] : ["All Subcategories", ...selectedCategoryData.subcategories];
   const approvedAds = ads.filter((ad) => ad.status === "approved");
-  const visibleItems = filter === "All" || filter === "Businesses" ? LOCAL_DISCOVERY : LOCAL_DISCOVERY.filter((item) => item.type === filter);
+  const searchTerm = query.trim().toLowerCase();
+  const categoryFilterActive = appliedCategory !== "all" || appliedSubcategory !== "All Subcategories";
+
+  const matchesText = (...values) => {
+    if (!searchTerm) return true;
+    return values
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(searchTerm);
+  };
+
+  const matchesAppliedMarketplaceFilter = (...values) => {
+    if (!categoryFilterActive) return true;
+    const haystack = values.filter(Boolean).join(" ").toLowerCase();
+    const selectedCategoryName = appliedCategoryData?.name?.toLowerCase() || "";
+    const selectedSubcategoryName = appliedSubcategory?.toLowerCase() || "";
+
+    if (appliedCategory !== "all" && selectedCategoryName && haystack.includes(selectedCategoryName)) return true;
+    if (appliedSubcategory !== "All Subcategories" && selectedSubcategoryName && haystack.includes(selectedSubcategoryName)) return true;
+
+    return false;
+  };
+
+  const applyMarketplaceFilter = () => {
+    setAppliedCategory(selectedCategory);
+    setAppliedSubcategory(selectedSubcategory);
+    showToast(
+      selectedSubcategory !== "All Subcategories"
+        ? `Showing ${selectedSubcategory}`
+        : selectedCategoryData?.name === "All"
+          ? "Showing all marketplace ads"
+          : `Showing ${selectedCategoryData?.name}`
+    );
+  };
+
+  const clearMarketplaceFilter = () => {
+    setSelectedCategory("all");
+    setSelectedSubcategory("All Subcategories");
+    setAppliedCategory("all");
+    setAppliedSubcategory("All Subcategories");
+    showToast("Marketplace filter cleared.");
+  };
+
+  const visibleItems = LOCAL_DISCOVERY.filter((item) =>
+    matchesText(item.type, item.title, item.subtitle, item.location, item.priority) &&
+    matchesAppliedMarketplaceFilter(item.type, item.title, item.subtitle, item.priority)
+  );
+
+  const visibleTopics = TRENDING_TOPICS.filter((topic) =>
+    matchesText(topic.type, topic.title, topic.location) &&
+    matchesAppliedMarketplaceFilter(topic.type, topic.title, topic.location)
+  );
+
+  const visibleBusinesses = NEARBY_BUSINESSES.filter((business) =>
+    matchesText(business.category, business.name, business.offer, business.location) &&
+    matchesAppliedMarketplaceFilter(business.category, business.name, business.offer, business.location)
+  );
+
+  const visibleAds = (approvedAds.length ? approvedAds : DEFAULT_ADS).filter((ad) =>
+    matchesText(ad.business, ad.title, ad.subtitle, ad.category, ad.location, ad.price) &&
+    matchesAppliedMarketplaceFilter(ad.category, ad.title, ad.subtitle, ad.price)
+  );
+
+  const hasResults =
+    visibleItems.length ||
+    visibleTopics.length ||
+    visibleBusinesses.length ||
+    visibleAds.length;
 
   return (
     <>
@@ -932,65 +1621,180 @@ function ExploreScreen({ openGroup, showToast, headerProps, ads = [], toggleGrou
         <GlassCard className="p-4">
           <div className="flex items-center gap-3 rounded-[24px] bg-white px-4 py-3 shadow-sm">
             <Search className="h-5 w-5 text-[#8f4e00]" />
-            <input className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-[#877365]" placeholder="Search local ads, jobs, food, events..." />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-[#877365]"
+              placeholder="Search local ads, jobs, food, events..."
+            />
+            {query ? (
+              <button
+                onClick={() => setQuery("")}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] transition active:scale-95"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
-          <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
-            {filters.map((item) => <button key={item} onClick={() => setFilter(item)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${filter === item ? "bg-[#ff9f43] text-[#2e1500]" : "bg-[#fff1e8] text-[#544437]"}`}>{item}</button>)}
+
+          <div className="mt-4 flex items-center justify-between px-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8f4e00]">Categories</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => scrollCategories(-1)}
+                className="grid h-7 w-7 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] shadow-sm transition active:scale-95"
+                aria-label="Scroll categories left"
+              >
+                ‹
+              </button>
+              <p className="text-[10px] font-bold text-[#877365]">Swipe sideways</p>
+              <button
+                type="button"
+                onClick={() => scrollCategories(1)}
+                className="grid h-7 w-7 place-items-center rounded-full bg-[#fff1e8] text-[#8f4e00] shadow-sm transition active:scale-95"
+                aria-label="Scroll categories right"
+              >
+                ›
+              </button>
+            </div>
           </div>
-        </GlassCard>
 
-        <section>
-          <div className="mb-3 flex items-end justify-between">
-            <div><h2 className="text-xl font-black">Local Discovery</h2><p className="text-xs font-bold text-[#544437]">Useful things happening around you</p></div>
-            <span className="rounded-full bg-[#e9fff9] px-3 py-1 text-xs font-black text-[#006b5e]">Live</span>
-          </div>
-          <div className="space-y-3">{visibleItems.map((item) => <DiscoveryCard key={item.id} item={item} showToast={showToast} />)}</div>
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Trending Topics</h2><button onClick={() => showToast("Trending topics refresh from local reports in production.")} className="text-xs font-black text-[#8f4e00]">Live pulse</button></div>
-          <div className="grid gap-3">{TRENDING_TOPICS.map((topic) => <TrendingTopicCard key={topic.id} topic={topic} showToast={showToast} />)}</div>
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Nearby Businesses</h2><button onClick={() => showToast("Restaurants, gyms, stores and promotions near you.")} className="text-xs font-black text-[#8f4e00]">View all</button></div>
-          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">{NEARBY_BUSINESSES.map((business) => <BusinessCard key={business.id} business={business} showToast={showToast} />)}</div>
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-xl font-black">Nearby Sponsored</h2>
-            <button onClick={() => showToast("Sponsored ads are approved from Admin Panel.")} className="text-xs font-black text-[#8f4e00]">How it works</button>
-          </div>
-          <div className="space-y-3">
-            {(approvedAds.length ? approvedAds : DEFAULT_ADS).slice(0, 3).map((ad) => (
-              <GlassCard key={ad.id} className="overflow-hidden">
-                <button onClick={() => showToast(`${ad.title} opened.`)} className="flex w-full gap-3 p-3 text-left transition active:scale-[0.99]">
-                  <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-[20px] bg-gradient-to-br from-[#ffdcc2] to-[#f8d8ff]">
-                    {ad.mediaUrl ? (ad.type === "video" ? <video src={ad.mediaUrl} className="h-full w-full object-cover" /> : <img src={ad.mediaUrl} alt={ad.title} className="h-full w-full object-cover" />) : <KChatLogoMark size={46} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="rounded-full bg-[#fff1e8] px-2 py-1 text-[10px] font-black uppercase text-[#8f4e00]">Sponsored</span>
-                    <h3 className="mt-2 line-clamp-1 font-black">{ad.title}</h3>
-                    <p className="mt-1 line-clamp-2 text-xs font-semibold text-[#544437]">{ad.subtitle}</p>
-                    <p className="mt-2 flex items-center gap-1 text-xs font-black text-[#8f4e00]"><MapPin className="h-3 w-3" /> {ad.location || "Imphal"}</p>
-                  </div>
-                </button>
-              </GlassCard>
+          <div
+            ref={categoryScrollRef}
+            className="no-scrollbar mt-2 flex w-full touch-pan-x snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain scroll-smooth pb-2 pr-8"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {MARKETPLACE_CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setSelectedCategory(category.id);
+                  setSelectedSubcategory("All Subcategories");
+                }}
+                className={`snap-start shrink-0 rounded-full px-5 py-3 text-sm font-black transition active:scale-95 ${
+                  selectedCategory === category.id
+                    ? "bg-[#ff9f43] text-[#2e1500] shadow-md"
+                    : "bg-[#fff1e8] text-[#544437]"
+                }`}
+              >
+                {category.name}
+              </button>
             ))}
           </div>
-        </section>
 
-        <section>
-          <div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Join Local Groups</h2><button onClick={() => showToast("Showing nearby groups.")} className="text-xs font-black text-[#8f4e00]">View all</button></div>
-          <div className="grid grid-cols-2 gap-3">
-            {BASE_GROUPS.slice(0, 4).map((group) => <CommunityCard key={group.id} group={group} openGroup={openGroup} toggleGroupMembership={toggleGroupMembership} />)}
+          <div className="mt-3 flex items-center justify-between px-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8f4e00]">Subcategories</p>
+            <p className="text-[10px] font-bold text-[#877365]">{visibleSubcategories.length} options</p>
           </div>
-        </section>
+
+          <div className="mt-2 max-h-[132px] overflow-y-auto rounded-[24px] bg-white/65 p-2 shadow-inner">
+            <div className="flex flex-wrap gap-2">
+              {visibleSubcategories.map((subcategory) => (
+                <button
+                  key={subcategory}
+                  onClick={() => setSelectedSubcategory(subcategory)}
+                  className={`rounded-full px-3 py-2 text-[11px] font-black transition active:scale-95 ${
+                    selectedSubcategory === subcategory
+                      ? "bg-[#221a13] text-white shadow-sm"
+                      : "bg-white text-[#8f4e00]"
+                  }`}
+                >
+                  {subcategory}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={applyMarketplaceFilter}
+              className="flex-1 rounded-full bg-[#221a13] px-5 py-3 text-sm font-black text-white shadow-sm transition active:scale-95"
+            >
+              Apply Search
+            </button>
+            {categoryFilterActive ? (
+              <button
+                type="button"
+                onClick={clearMarketplaceFilter}
+                className="rounded-full bg-[#fff1e8] px-5 py-3 text-sm font-black text-[#8f4e00] transition active:scale-95"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          {categoryFilterActive ? (
+            <p className="mt-3 rounded-[18px] bg-[#fff1e8] px-4 py-3 text-xs font-black text-[#8f4e00]">
+              Showing: {appliedCategoryData?.name || "All"}
+              {appliedSubcategory !== "All Subcategories" ? ` / ${appliedSubcategory}` : ""}
+            </p>
+          ) : null}
+        </GlassCard>
+
+        {!hasResults ? (
+          <GlassCard className="p-6 text-center">
+            <h2 className="text-lg font-black text-[#221a13]">No results found</h2>
+            <p className="mt-2 text-sm font-semibold text-[#544437]">Try another search word or clear the category filter.</p>
+          </GlassCard>
+        ) : null}
+
+        {visibleItems.length ? (
+          <section>
+            <div className="mb-3 flex items-end justify-between">
+              <div><h2 className="text-xl font-black">Local Discovery</h2><p className="text-xs font-bold text-[#544437]">Useful things happening around you</p></div>
+              <span className="rounded-full bg-[#e9fff9] px-3 py-1 text-xs font-black text-[#006b5e]">Live</span>
+            </div>
+            <div className="space-y-3">{visibleItems.map((item) => <DiscoveryCard key={item.id} item={item} showToast={showToast} />)}</div>
+          </section>
+        ) : null}
+
+        {visibleTopics.length ? (
+          <section>
+            <div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Trending Topics</h2><button onClick={() => showToast("Trending topics refresh from local reports in production.")} className="text-xs font-black text-[#8f4e00]">Live pulse</button></div>
+            <div className="grid gap-3">{visibleTopics.map((topic) => <TrendingTopicCard key={topic.id} topic={topic} showToast={showToast} />)}</div>
+          </section>
+        ) : null}
+
+        {visibleBusinesses.length ? (
+          <section>
+            <div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Nearby Businesses</h2><button onClick={() => showToast("Restaurants, gyms, stores and promotions near you.")} className="text-xs font-black text-[#8f4e00]">View all</button></div>
+            <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">{visibleBusinesses.map((business) => <BusinessCard key={business.id} business={business} showToast={showToast} />)}</div>
+          </section>
+        ) : null}
+
+        {visibleAds.length ? (
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xl font-black">Nearby Sponsored</h2>
+              <button onClick={() => showToast("Sponsored ads are approved from Admin Panel.")} className="text-xs font-black text-[#8f4e00]">How it works</button>
+            </div>
+            <div className="space-y-3">
+              {visibleAds.slice(0, 3).map((ad) => (
+                <GlassCard key={ad.id} className="overflow-hidden">
+                  <button onClick={() => showToast(`${ad.title} opened.`)} className="flex w-full gap-3 p-3 text-left transition active:scale-[0.99]">
+                    <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-[20px] bg-gradient-to-br from-[#ffdcc2] to-[#f8d8ff]">
+                      {ad.mediaUrl ? (ad.type === "video" ? <video src={ad.mediaUrl} className="h-full w-full object-cover" /> : <img src={ad.mediaUrl} alt={ad.title} className="h-full w-full object-cover" />) : <KChatLogoMark size={46} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="rounded-full bg-[#fff1e8] px-2 py-1 text-[10px] font-black uppercase text-[#8f4e00]">Sponsored</span>
+                      <h3 className="mt-2 line-clamp-1 font-black">{ad.title}</h3>
+                      <p className="mt-1 line-clamp-2 text-xs font-semibold text-[#544437]">{ad.subtitle}</p>
+                      <p className="mt-2 flex items-center gap-1 text-xs font-black text-[#8f4e00]"><MapPin className="h-3 w-3" /> {ad.location || "Imphal"}</p>
+                    </div>
+                  </button>
+                </GlassCard>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </main>
     </>
   );
 }
+
 
 function CreateGroupScreen({ setActive, showToast, headerProps, createGroup }) {
   const [name, setName] = useState("");
@@ -1106,7 +1910,7 @@ function GroupManageScreen({ activeGroup, setActive, showToast, headerProps, upd
   );
 }
 
-function ChatScreen({ activeGroup, showToast, headerProps }) {
+function ChatScreen({ activeGroup, showToast, headerProps, openPrivateChat }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
@@ -1115,6 +1919,8 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
   const [typingUsers, setTypingUsers] = useState([]);
   const groupId = activeGroup?.id || "private-demo";
   const groupName = activeGroup?.name || "Private Chat";
+  const isDirectChat = Boolean(activeGroup?.isDirectChat);
+  const directUser = activeGroup?.directUser || null;
   const scrollRef = useRef(null);
   const endRef = useRef(null);
   const lastNotificationCountRef = useRef(0);
@@ -1245,24 +2051,71 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
     }
   };
 
+  const openSenderDirectChat = (message) => {
+    if (message.senderId === currentUser.uid) return;
+    const user = getUserByUid(message.senderId) || {
+      uid: message.senderId,
+      name: message.senderName || "Member",
+      role: "user",
+    };
+
+    if (!user.uid || user.uid === "demo-user-2") {
+      showToast("Direct chat is available after a real member sends a message.");
+      return;
+    }
+
+    openPrivateChat(user);
+  };
+
   return (
     <>
       <TopBar {...headerProps} title={groupName} />
       <main ref={scrollRef} className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+64px)] bottom-[calc(env(safe-area-inset-bottom)+176px)] z-10 w-full max-w-[430px] -translate-x-1/2 space-y-4 overflow-y-auto px-4 pb-6 pt-6">
-        <div className="flex justify-between rounded-[22px] bg-white/80 px-4 py-3 text-xs font-black text-[#544437] shadow-sm">
+        <div className="flex items-center justify-between rounded-[22px] bg-white/80 px-4 py-3 text-xs font-black text-[#544437] shadow-sm">
           <span className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-green-500" : "bg-orange-400"}`} />
-            {online ? "Realtime connected" : "Offline queue active"}
+            {isDirectChat ? "Private chat" : online ? "Realtime connected" : "Offline queue active"}
           </span>
-          <button onClick={() => headerProps.setActive("groupManage")} className="rounded-full bg-[#fff1e8] px-3 py-1 text-[11px] font-black text-[#8f4e00] transition active:scale-95">Group Info</button>
+          {isDirectChat && directUser ? (
+            <div className="flex items-center gap-2 rounded-full bg-[#fff1e8] px-2 py-1 text-[11px] font-black text-[#8f4e00]">
+              <UserAvatar user={directUser} size={24} />
+              <span>{directUser.name}</span>
+            </div>
+          ) : (
+            <button onClick={() => headerProps.setActive("groupManage")} className="rounded-full bg-[#fff1e8] px-3 py-1 text-[11px] font-black text-[#8f4e00] transition active:scale-95">Group Info</button>
+          )}
         </div>
 
         {messages.map((message) => {
           const isMe = message.senderId === currentUser.uid;
+          const senderUser = isMe ? currentUser : getUserByUid(message.senderId) || { uid: message.senderId, name: message.senderName || "Member" };
+
           return (
-            <div key={message.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+            <div key={message.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+              {!isMe ? <UserAvatar user={senderUser} size={36} /> : null}
+
               <div className={`max-w-[78%] rounded-[26px] p-4 shadow-sm ${isMe ? "rounded-tr-md bg-[#ff9f43] text-white" : "rounded-tl-md bg-white text-[#221a13]"}`}>
-                <p className="text-xs font-black opacity-70">{isMe ? "You" : message.senderName}</p>
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => openSenderDirectChat(message)}
+                    className={`text-left text-xs font-black opacity-80 ${isMe ? "cursor-default" : "underline decoration-transparent hover:decoration-current"}`}
+                    disabled={isMe}
+                  >
+                    {isMe ? "You" : senderUser.name}
+                  </button>
+
+                  {!isMe && !isDirectChat ? (
+                    <button
+                      type="button"
+                      onClick={() => openSenderDirectChat(message)}
+                      className="rounded-full bg-[#fff1e8] px-2 py-1 text-[10px] font-black text-[#8f4e00] transition active:scale-95"
+                    >
+                      Chat
+                    </button>
+                  ) : null}
+                </div>
+
                 {message.mediaUrl && message.mediaType === "image" ? <img src={message.mediaUrl} alt="Shared" className="mt-2 max-h-56 w-full rounded-[18px] object-cover" /> : null}
                 {message.mediaUrl && message.mediaType === "video" ? <video src={message.mediaUrl} controls className="mt-2 max-h-56 w-full rounded-[18px]" /> : null}
                 <p className="mt-1 text-sm font-semibold">{message.body}</p>
@@ -1270,6 +2123,8 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
                   {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {isMe ? messageStatusIcon(message.status) : ""}
                 </p>
               </div>
+
+              {isMe ? <UserAvatar user={currentUser} size={36} /> : null}
             </div>
           );
         })}
@@ -1301,7 +2156,7 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
           <Camera className="h-5 w-5" />
         </label>
         <div className="flex flex-1 items-center rounded-[26px] bg-white px-4 py-3 shadow-lg">
-          <input value={text} onChange={(event) => { setText(event.target.value); updateTypingState(Boolean(event.target.value.trim())); }} onKeyDown={(event) => { if (event.key === "Enter") send(); }} className="w-full bg-transparent text-sm font-semibold outline-none" placeholder="Message..." />
+          <input value={text} onChange={(event) => { setText(event.target.value); updateTypingState(Boolean(event.target.value.trim())); }} onKeyDown={(event) => { if (event.key === "Enter") send(); }} className="w-full bg-transparent text-sm font-semibold outline-none" placeholder={isDirectChat && directUser ? `Message ${directUser.name}...` : "Message..."} />
         </div>
         <button onClick={send} className="grid h-14 w-14 place-items-center rounded-[22px] bg-[#ff9f43] text-white shadow-lg">
           <Send className="h-5 w-5" />
@@ -1310,6 +2165,7 @@ function ChatScreen({ activeGroup, showToast, headerProps }) {
     </>
   );
 }
+
 
 
 function AdDetailScreen({ ad, setActive, showToast, headerProps }) {
@@ -1474,6 +2330,46 @@ function TiersScreen({ showToast, headerProps }) {
 }
 
 
+function PremiumScreen({ setActive, showToast, headerProps }) {
+  return (
+    <>
+      <TopBar {...headerProps} back={() => setActive("dashboard")} title="Premium" />
+      <main className="space-y-5 px-4 pb-36 pt-[calc(env(safe-area-inset-top)+88px)]">
+        <GlassCard className="p-6 text-center">
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-[24px] bg-[#fff1e8] text-[#8f4e00]">
+            <Crown className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-black text-[#221a13]">Premium Account</h1>
+          <p className="mt-2 text-sm font-semibold text-[#544437]">Unlock who is online, member profiles, and premium discovery tools.</p>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-[#8f4e00]">Monthly plan</p>
+              <h2 className="mt-1 text-3xl font-black text-[#221a13]">₹99</h2>
+            </div>
+            <span className="rounded-full bg-[#e9fff9] px-3 py-1 text-xs font-black text-[#006b5e]">MVP</span>
+          </div>
+
+          <div className="mt-5 space-y-3 text-sm font-semibold text-[#544437]">
+            <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#006b5e]" /> View who is online</p>
+            <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#006b5e]" /> Open online user profiles</p>
+            <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#006b5e]" /> Premium visibility tools</p>
+          </div>
+
+          <button
+            onClick={() => showToast("Payment page placeholder. Connect Razorpay/Stripe before production.")}
+            className="mt-6 w-full rounded-full bg-[#221a13] py-4 text-base font-black text-white shadow-lg transition active:scale-95"
+          >
+            Pay ₹99 and Upgrade
+          </button>
+        </GlassCard>
+      </main>
+    </>
+  );
+}
+
 function ProfileScreen({ showToast, headerProps, setActive, setIsLoggedIn, pendingAdsCount }) {
   const [settings, setSettings] = useState([
     { Icon: ShieldCheck, title: "Verified identity", subtitle: "Phone verified and trusted profile", enabled: true },
@@ -1543,7 +2439,7 @@ function ProfileScreen({ showToast, headerProps, setActive, setIsLoggedIn, pendi
 }
 
 export default function KangleiChatMobileMVP() {
-  const [active, setActive] = useState(storage.get("kchat_logged_in", false) ? "feed" : "onboarding");
+  const [active, setActive] = useState(storage.get("kchat_logged_in", false) ? "dashboard" : "onboarding");
   const [isLoggedIn, setIsLoggedIn] = useState(storage.get("kchat_logged_in", false));
   const [toast, setToast] = useState("");
   const [activeGroup, setActiveGroup] = useState(BASE_GROUPS[0]);
@@ -1602,7 +2498,7 @@ export default function KangleiChatMobileMVP() {
   useEffect(() => {
     const safePushFeedState = () => {
       try {
-        window.history.pushState({ screen: "feed" }, "", window.location.href);
+        window.history.pushState({ screen: "dashboard" }, "", window.location.href);
       } catch {
         return false;
       }
@@ -1611,8 +2507,8 @@ export default function KangleiChatMobileMVP() {
 
     const handleBack = async (exitApp) => {
       const currentScreen = screenRef.current;
-      if (["chat", "search", "tiers", "sponsorForm", "admin", "explore", "profile", "createGroup", "groupManage", "allAds", "adDetail", "pendingAds"].includes(currentScreen)) {
-        setActive("feed");
+      if (["feed", "chat", "search", "tiers", "sponsorForm", "admin", "explore", "profile", "createGroup", "groupManage", "allAds", "adDetail", "pendingAds"].includes(currentScreen)) {
+        setActive("dashboard");
         safePushFeedState();
         return;
       }
@@ -1698,26 +2594,46 @@ export default function KangleiChatMobileMVP() {
     setActive("chat");
     showToast(`Opened ${group.name}`);
   };
+  const openPrivateChat = (user) => {
+    if (!user?.uid) {
+      showToast("User not found.");
+      return;
+    }
+
+    if (user.uid === currentUser.uid) {
+      showToast("You cannot start a private chat with yourself.");
+      return;
+    }
+
+    const privateGroup = makePrivateChatGroup(user);
+    storage.set(unreadKey(privateGroup.id), 0);
+    setActiveGroup(privateGroup);
+    setActive("chat");
+    showToast(`Private chat opened with ${user.name}.`);
+  };
+
   const headerProps = { setActive, openMenu: () => setDrawerOpen(true), showUserIcon: isLoggedIn };
-  const navActive = active === "explore" || active === "profile" ? active : "feed";
+  const navActive = ["dashboard", "feed", "explore", "sponsorForm", "profile"].includes(active) ? active : "dashboard";
 
   const content = useMemo(() => {
     if (!isLoggedIn) return <OnboardingScreen setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "onboarding") return <OnboardingScreen setActive={setActive} showToast={showToast} headerProps={headerProps} />;
-    if (active === "feed") return <FeedScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
+    if (active === "dashboard") return <DashboardScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
+    if (active === "feed") return <FeedScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} openPrivateChat={openPrivateChat} />;
     if (active === "allAds") return <AllAdsScreen ads={ads} setActive={setActive} openAd={openAd} headerProps={headerProps} />;
     if (active === "adDetail") return <AdDetailScreen ad={selectedAd} setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "search") return <SearchScreen openGroup={openGroup} headerProps={headerProps} toggleGroupMembership={toggleGroupMembership} />;
     if (active === "explore") return <ExploreScreen openGroup={openGroup} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
-    if (active === "chat") return <ChatScreen activeGroup={activeGroup} showToast={showToast} headerProps={headerProps} />;
+    if (active === "chat") return <ChatScreen activeGroup={activeGroup} showToast={showToast} headerProps={headerProps} openPrivateChat={openPrivateChat} />;
     if (active === "groupManage") return <GroupManageScreen activeGroup={activeGroup} setActive={setActive} showToast={showToast} headerProps={headerProps} updateGroup={updateGroup} />;
     if (active === "createGroup") return <CreateGroupScreen setActive={setActive} showToast={showToast} headerProps={headerProps} createGroup={createGroup} />;
     if (active === "tiers") return <TiersScreen showToast={showToast} headerProps={headerProps} />;
+    if (active === "premium") return <PremiumScreen setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "profile") return <ProfileScreen showToast={showToast} headerProps={headerProps} setActive={setActive} setIsLoggedIn={setIsLoggedIn} pendingAdsCount={userPendingAdsCount} />;
     if (active === "pendingAds") return <PendingAdsScreen pendingAds={pendingAds} setActive={setActive} showToast={showToast} headerProps={headerProps} />;
     if (active === "sponsorForm") return <SponsorRequestScreen setActive={setActive} showToast={showToast} headerProps={headerProps} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
     if (active === "admin") return <AdminPanelScreen setActive={setActive} showToast={showToast} headerProps={headerProps} ads={ads} setAds={setAds} pendingAds={pendingAds} setPendingAds={setPendingAds} />;
-    return <FeedScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
+    return <DashboardScreen setActive={setActive} openGroup={openGroup} openAd={openAd} showToast={showToast} headerProps={headerProps} ads={ads} toggleGroupMembership={toggleGroupMembership} />;
   }, [active, activeGroup, ads, pendingAds, selectedAd, isLoggedIn]);
 
   return (
